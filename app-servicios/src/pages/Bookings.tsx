@@ -1,7 +1,11 @@
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonIcon } from '@ionic/react';
-import { hourglassOutline } from 'ionicons/icons';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonSpinner } from '@ionic/react';
+import { useAuth } from '../contexts/AuthContext';
+import ClientBookings from '../components/ClientBookings';
+import ProfessionalBookings from '../components/ProfessionalBookings';
 
 const Bookings: React.FC = () => {
+  const { user, role } = useAuth();
+
   return (
     <IonPage>
       <IonHeader>
@@ -10,14 +14,15 @@ const Bookings: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent>
-        <div className="app-empty" style={{ paddingTop: 72 }}>
-          <IonIcon icon={hourglassOutline} />
-          <h3>Todavía no está listo</h3>
-          <p>
-            Acá vas a poder ver el estado de tus solicitudes de servicio
-            (solicitado, aceptado, completado). Es la Fase 5 del roadmap.
-          </p>
-        </div>
+        {!user || !role ? (
+          <div className="ion-text-center ion-padding">
+            <IonSpinner />
+          </div>
+        ) : role === 'profesional' ? (
+          <ProfessionalBookings userId={user.id} />
+        ) : (
+          <ClientBookings userId={user.id} />
+        )}
       </IonContent>
     </IonPage>
   );

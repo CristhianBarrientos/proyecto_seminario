@@ -41,6 +41,24 @@ export type ServiceItem = z.infer<typeof serviceItemSchema>;
  * no matchea, se descarta y se loguea en consola (no se rompe el feed
  * completo por una fila inesperada) - devuelve solo las filas válidas.
  */
+const bookingServiceRefSchema = z.object({ title: z.string(), price_unit: z.string() }).nullable();
+
+export const bookingRowSchema = z.object({
+  id: z.string(),
+  status: z.enum(['solicitado', 'aceptado', 'en_curso', 'completado', 'cancelado']),
+  scheduled_at: z.string().nullable(),
+  price_agreed: z.number().nullable(),
+  notes: z.string().nullable(),
+  created_at: z.string(),
+  client_id: z.string(),
+  professional_id: z.string(),
+  services: bookingServiceRefSchema,
+});
+
+export const bookingRowListSchema = z.array(bookingRowSchema);
+export type BookingRow = z.infer<typeof bookingRowSchema>;
+export type BookingStatus = BookingRow['status'];
+
 export function parseRowsOrDrop<T>(schema: z.ZodType<T>, rows: unknown[], context: string): T[] {
   const result: T[] = [];
   for (const row of rows) {
