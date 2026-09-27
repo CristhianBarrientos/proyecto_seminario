@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonBackButton, IonButtons,
-  IonIcon, IonText, IonSpinner,
+  IonIcon, IonText, IonSpinner, IonButton, IonTextarea,
 } from '@ionic/react';
-import { shieldCheckmarkOutline, star, hammerOutline, constructOutline, informationCircleOutline, timeOutline } from 'ionicons/icons';
+import {
+  shieldCheckmarkOutline, star, hammerOutline, constructOutline, informationCircleOutline,
+  paperPlaneOutline, closeOutline, checkmarkCircleOutline,
+} from 'ionicons/icons';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
 import { serviceItemSchema, parseRowsOrDrop, type ServiceItem } from '../lib/supabaseSchemas';
+import { useAuth } from '../contexts/AuthContext';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import './ProfessionalDetail.css';
 
@@ -25,11 +29,18 @@ interface RatingData {
 
 const ProfessionalDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { user, role } = useAuth();
+  const navigate = useNavigate();
   const [professional, setProfessional] = useState<ProfessionalData | null>(null);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [rating, setRating] = useState<RatingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [requestingId, setRequestingId] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [requestError, setRequestError] = useState('');
+  const [sentServiceId, setSentServiceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -88,6 +99,42 @@ const ProfessionalDetail: React.FC = () => {
       cancelled = true;
     };
   }, [id]);
+
+  const openRequestForm = (serviceId: string) => {
+    setRequestingId(serviceId);
+    setNotes('');
+    setRequestError('');
+  };
+
+  const closeRequestForm = () => {
+    setRequestingId(null);
+    setNotes('');
+    setRequestError('');
+  };
+
+  const handleSendRequest = async (serviceId: string) => {
+    if (submitting || !user || !id) return;
+    setSubmitting(true);
+    setRequestError('');
+
+    const { error } = await supabase.from('bookings').insert({
+      client_id: user.id,
+      professional_id: id,
+      service_id: serviceId,
+      notes: notes.trim() || null,
+    });
+
+    setSubmitting(false);
+
+    if (error) {
+      setRequestError(getFriendlyErrorMessage(error));
+      return;
+    }
+
+    setRequestingId(null);
+    setNotes('');
+    setSentServiceId(serviceId);
+  };
 
   return (
     <IonPage>
@@ -152,14 +199,63 @@ const ProfessionalDetail: React.FC = () => {
             <div className="pro-detail-services">
               {services.map((s) => (
                 <div key={s.id} className="app-card pro-detail-service">
-                  <div className="pro-detail-service__body">
-                    <p className="pro-detail-service__title">
-                      <IonIcon icon={hammerOutline} />
-                      {s.title}
-                    </p>
-                    <p className="pro-detail-service__category">{s.categories?.name}</p>
+                  <div className="pro-detail-service__row">
+                    <div className="pro-detail-service__body">
+                      <p className="pro-detail-service__title">
+                        <IonIcon icon={hammerOutline} />
+                        {s.title}
+                      </p>
+                      <p className="pro-detail-service__category">{s.categories?.name}</p>
+                    </div>
+                    <span className="app-price">Q{s.price} / {s.price_unit}</span>
                   </div>
-                  <span className="app-price">Q{s.price} / {s.price_unit}</span>
+
+                  {role === 'cliente' && (
+                    sentServiceId === s.id ? (
+                      <div className="pro-detail-service__sent">
+                        <p>
+                          <IonIcon icon={checkmarkCircleOutline} color="success" />
+                          Solicitud enviada.
+                        </p>
+                        <IonButton fill="clear" size="small" onClick={() => navigate('/tabs/bookings')}>
+                          Ver mis solicitudes
+                        </IonButton>
+                      </div>
+                    ) : requestingId === s.id ? (
+                      <div className="pro-detail-service__form">
+                        <IonTextarea
+                          placeholder="Contale al profesional qué necesitás (opcional)"
+                          value={notes}
+                          onIonInput={(e) => setNotes(e.detail.value ?? '')}
+                          autoGrow
+                        />
+                        {requestError && (
+                          <IonText color="danger"><p className="pro-detail-service__error">{requestError}</p></IonText>
+                        )}
+                        <div className="pro-detail-service__form-actions">
+                          <IonButton fill="clear" color="medium" disabled={submitting} onClick={closeRequestForm}>
+                            <IonIcon icon={closeOutline} slot="start" />
+                            Cancelar
+                          </IonButton>
+                          <IonButton color="secondary" disabled={submitting} onClick={() => handleSendRequest(s.id)}>
+                            <IonIcon icon={paperPlaneOutline} slot="start" />
+                            Enviar solicitud
+                          </IonButton>
+                        </div>
+                      </div>
+                    ) : (
+                      <IonButton
+                        expand="block"
+                        fill="outline"
+                        color="secondary"
+                        className="pro-detail-service__request-btn"
+                        onClick={() => openRequestForm(s.id)}
+                      >
+                        <IonIcon icon={paperPlaneOutline} slot="start" />
+                        Solicitar servicio
+                      </IonButton>
+                    )
+                  )}
                 </div>
               ))}
               {services.length === 0 && (
@@ -169,11 +265,6 @@ const ProfessionalDetail: React.FC = () => {
                   <p>Este profesional todavía no publicó servicios.</p>
                 </div>
               )}
-            </div>
-
-            <div className="pro-detail-notice">
-              <IonIcon icon={timeOutline} color="medium" />
-              <p>El botón "Solicitar servicio" llega en la Fase 5 (bookings).</p>
             </div>
           </>
         )}
