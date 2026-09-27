@@ -8,6 +8,7 @@ import { shieldCheckmarkOutline, hammerOutline, funnelOutline, cashOutline, sear
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
+import { rawServiceRowSchema, parseRowsOrDrop } from '../lib/supabaseSchemas';
 import { useAuth } from '../contexts/AuthContext';
 import ProfessionalDashboard from '../components/ProfessionalDashboard';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
@@ -31,21 +32,6 @@ interface ServiceFeedItem {
 interface Category {
   id: number;
   name: string;
-}
-
-// supabase-js infiere `categories ( name )` como relación "a muchos" ({name}[])
-// a partir del string del select, sin poder ver que category_id es en realidad
-// una FK "a uno" - en runtime siempre llega como objeto único (o null), nunca
-// array. Este tipo describe la forma real de la fila cruda para poder castear
-// sin pelear con la inferencia automática de supabase-js.
-interface RawServiceRow {
-  id: string;
-  title: string;
-  price: number;
-  price_unit: string;
-  category_id: number;
-  professional_id: string;
-  categories: { name: string } | null;
 }
 
 const Home: React.FC = () => {
@@ -100,7 +86,7 @@ const Home: React.FC = () => {
         return;
       }
 
-      const rawServices = (servicesResult.data ?? []) as unknown as RawServiceRow[];
+      const rawServices = parseRowsOrDrop(rawServiceRowSchema, servicesResult.data ?? [], 'Home.services');
       const professionalIds = [...new Set(rawServices.map((s) => s.professional_id))];
 
       const [profProfilesResult, profilesResult] = professionalIds.length
