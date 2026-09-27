@@ -153,7 +153,7 @@ const ClientBookings: React.FC<Props> = ({ userId }) => {
           {b.price_agreed !== null && (
             <p className="booking-item__meta">
               <IonIcon icon={cashOutline} color="medium" />
-              Precio acordado: Q{b.price_agreed}
+              Precio acordado: Q{b.price_agreed.toLocaleString('es-GT')}
             </p>
           )}
 

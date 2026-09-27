@@ -36,11 +36,6 @@ export const serviceItemSchema = z.object({
 export const serviceItemListSchema = z.array(serviceItemSchema);
 export type ServiceItem = z.infer<typeof serviceItemSchema>;
 
-/**
- * Valida un array de filas crudas de Supabase contra `schema`. Si una fila
- * no matchea, se descarta y se loguea en consola (no se rompe el feed
- * completo por una fila inesperada) - devuelve solo las filas válidas.
- */
 const bookingServiceRefSchema = z.object({ title: z.string(), price_unit: z.string() }).nullable();
 
 export const bookingRowSchema = z.object({
@@ -59,6 +54,11 @@ export const bookingRowListSchema = z.array(bookingRowSchema);
 export type BookingRow = z.infer<typeof bookingRowSchema>;
 export type BookingStatus = BookingRow['status'];
 
+/**
+ * Valida un array de filas crudas de Supabase contra `schema`. Si una fila
+ * no matchea, se descarta y se loguea en consola (no se rompe el feed
+ * completo por una fila inesperada) - devuelve solo las filas válidas.
+ */
 export function parseRowsOrDrop<T>(schema: z.ZodType<T>, rows: unknown[], context: string): T[] {
   const result: T[] = [];
   for (const row of rows) {
