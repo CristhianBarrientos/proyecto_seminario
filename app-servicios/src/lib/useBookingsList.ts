@@ -105,6 +105,9 @@ export function useBookingsList(userId: string, ownField: OwnField) {
       return;
     }
     setError('');
+    // Actualización optimista: no esperar a que la suscripción realtime traiga el cambio de
+    // vuelta (puede tardar o no llegar) - la propia mutación ya confirmó el nuevo estado.
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
   });
 
   return { bookings, loading, error, pendingIds, updateStatus };
