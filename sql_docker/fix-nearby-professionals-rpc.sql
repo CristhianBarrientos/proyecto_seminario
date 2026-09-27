@@ -13,8 +13,15 @@
 
 -- ------------------------------------------------------------
 -- 1. Vista pública sin location.
+-- NOTA: no se puede usar CREATE OR REPLACE VIEW porque Postgres no
+-- permite eliminar columnas de una vista existente (error: "cannot
+-- drop columns from view") — hay que dropearla y recrearla. Verificado
+-- que ninguna otra vista depende de professional_profiles_public antes
+-- de dropearla.
 -- ------------------------------------------------------------
-create or replace view public.professional_profiles_public
+drop view if exists public.professional_profiles_public;
+
+create view public.professional_profiles_public
   with (security_invoker='false') as
 select profile_id, bio, service_radius_km, is_verified, created_at
 from public.professional_profiles;
