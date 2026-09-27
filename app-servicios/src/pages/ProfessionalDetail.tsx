@@ -7,16 +7,9 @@ import {
 import { shieldCheckmarkOutline, star, hammerOutline, constructOutline, informationCircleOutline, timeOutline } from 'ionicons/icons';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
+import { serviceItemSchema, parseRowsOrDrop, type ServiceItem } from '../lib/supabaseSchemas';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import './ProfessionalDetail.css';
-
-interface ServiceItem {
-  id: string;
-  title: string;
-  price: number;
-  price_unit: string;
-  categories: { name: string } | null;
-}
 
 interface ProfessionalData {
   profile_id: string;
@@ -84,7 +77,7 @@ const ProfessionalDetail: React.FC = () => {
             }
           : null,
       );
-      setServices((servicesResult.data as unknown as ServiceItem[]) ?? []);
+      setServices(parseRowsOrDrop(serviceItemSchema, servicesResult.data ?? [], 'ProfessionalDetail.services'));
       setRating(ratingResult.data as RatingData | null);
       setLoading(false);
     };
