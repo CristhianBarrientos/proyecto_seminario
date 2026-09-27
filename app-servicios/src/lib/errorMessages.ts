@@ -61,6 +61,13 @@ export function getFriendlyErrorMessage(error: unknown): string {
   if (code === '23514' || code === '22P02') {
     return 'Alguno de los datos ingresados no es válido.';
   }
+  // RAISE EXCEPTION de nuestros propios triggers (máquina de estados de bookings,
+  // guard de is_verified, guard de reviews) - código por defecto P0001. A diferencia
+  // de los demás errores de Postgres, ya vienen redactados en español para el usuario
+  // final, así que se muestran tal cual en vez de mapearlos a un mensaje genérico.
+  if (code === 'P0001' && err?.message) {
+    return err.message;
+  }
 
   // --- Error de red (servidor apagado, sin conexión, etc.) ---
   if (error instanceof TypeError && rawMessage.includes('fetch')) {

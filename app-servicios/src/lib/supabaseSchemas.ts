@@ -36,6 +36,24 @@ export const serviceItemSchema = z.object({
 export const serviceItemListSchema = z.array(serviceItemSchema);
 export type ServiceItem = z.infer<typeof serviceItemSchema>;
 
+const bookingServiceRefSchema = z.object({ title: z.string(), price_unit: z.string() }).nullable();
+
+export const bookingRowSchema = z.object({
+  id: z.string(),
+  status: z.enum(['solicitado', 'aceptado', 'en_curso', 'completado', 'cancelado']),
+  scheduled_at: z.string().nullable(),
+  price_agreed: z.number().nullable(),
+  notes: z.string().nullable(),
+  created_at: z.string(),
+  client_id: z.string(),
+  professional_id: z.string(),
+  services: bookingServiceRefSchema,
+});
+
+export const bookingRowListSchema = z.array(bookingRowSchema);
+export type BookingRow = z.infer<typeof bookingRowSchema>;
+export type BookingStatus = BookingRow['status'];
+
 /**
  * Valida un array de filas crudas de Supabase contra `schema`. Si una fila
  * no matchea, se descarta y se loguea en consola (no se rompe el feed
