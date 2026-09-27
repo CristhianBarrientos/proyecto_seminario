@@ -40,7 +40,7 @@ const ProfessionalDetail: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [requestError, setRequestError] = useState('');
-  const [sentServiceId, setSentServiceId] = useState<string | null>(null);
+  const [sentServiceIds, setSentServiceIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!id) return;
@@ -133,7 +133,7 @@ const ProfessionalDetail: React.FC = () => {
 
     setRequestingId(null);
     setNotes('');
-    setSentServiceId(serviceId);
+    setSentServiceIds((prev) => new Set(prev).add(serviceId));
   };
 
   return (
@@ -211,7 +211,7 @@ const ProfessionalDetail: React.FC = () => {
                   </div>
 
                   {role === 'cliente' && (
-                    sentServiceId === s.id ? (
+                    sentServiceIds.has(s.id) ? (
                       <div className="pro-detail-service__sent">
                         <p>
                           <IonIcon icon={checkmarkCircleOutline} color="success" />
