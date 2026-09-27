@@ -1,37 +1,32 @@
 /// <reference types="cypress" />
-// ***********************************************
-// This example commands.ts shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
-//
-// declare global {
-//   namespace Cypress {
-//     interface Chainable {
-//       login(email: string, password: string): Chainable<void>
-//       drag(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       dismiss(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       visit(originalFn: CommandOriginalFn, url: string, options: Partial<VisitOptions>): Chainable<Element>
-//     }
-//   }
-// }
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Cypress {
+    interface Chainable {
+      /**
+       * Crea una cuenta directo contra la API de GoTrue (sin pasar por la
+       * UI de Login) para dejar un usuario conocido listo antes de un test
+       * que no está probando el flujo de signup en sí (ej. login, feed).
+       * El stack local tiene autoconfirm habilitado, así que el usuario
+       * queda listo para loguear de inmediato.
+       */
+      apiSignup(email: string, password: string, fullName: string, role: 'cliente' | 'profesional'): Chainable<void>;
+    }
+  }
+}
+
+Cypress.Commands.add('apiSignup', (email, password, fullName, role) => {
+  cy.request({
+    method: 'POST',
+    url: `${Cypress.env('supabaseUrl')}/auth/v1/signup`,
+    headers: { apikey: Cypress.env('supabaseAnonKey') },
+    body: {
+      email,
+      password,
+      data: { full_name: fullName, role },
+    },
+  });
+});
+
+export {};
