@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { IonButton, IonIcon } from '@ionic/react';
+import { IonButton, IonCheckbox, IonIcon } from '@ionic/react';
 import { calendarOutline, cashOutline, chatbubbleOutline, chatbubblesOutline, constructOutline } from 'ionicons/icons';
 import { STATUS_META, type BookingListItem } from '../lib/useBookingsList';
 import ChatModal from './ChatModal';
@@ -11,9 +11,11 @@ interface Props {
   /** Info extra junto al nombre de la contraparte (ej. su calificación promedio). */
   partyExtra?: ReactNode;
   children?: ReactNode;
+  /** Modo selección (ocultar solicitudes): muestra un checkbox en la tarjeta. */
+  selection?: { selected: boolean; onToggle: () => void };
 }
 
-const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, partyExtra, children }) => {
+const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, partyExtra, children, selection }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const canChat = b.status !== 'cancelado';
 
@@ -21,6 +23,14 @@ const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, partyExtra, chil
   <div className="app-card booking-item">
     <div className="booking-item__header">
       <p className="booking-item__title">
+        {selection && (
+          <IonCheckbox
+            checked={selection.selected}
+            onIonChange={selection.onToggle}
+            aria-label="Seleccionar solicitud"
+            style={{ marginRight: 8 }}
+          />
+        )}
         <IonIcon icon={constructOutline} />
         {b.services?.title ?? 'Servicio'}
       </p>
