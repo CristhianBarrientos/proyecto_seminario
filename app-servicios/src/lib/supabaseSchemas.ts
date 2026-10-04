@@ -22,6 +22,20 @@ export const rawServiceRowSchema = z.object({
   categories: categoryRefSchema,
 });
 
+// Fila plana de la RPC feed_services() (sql_docker/perf-feed-services-rpc.sql): servicios activos
+// ya unidos con categoría, nombre del profesional y verificación en un solo round-trip.
+export const feedServiceRowSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  price: z.number(),
+  price_unit: z.string(),
+  category_id: z.number(),
+  category_name: z.string().nullable(),
+  professional_id: z.string(),
+  professional_name: z.string().nullable(),
+  is_verified: z.boolean(),
+});
+
 export const rawServiceRowListSchema = z.array(rawServiceRowSchema);
 export type RawServiceRow = z.infer<typeof rawServiceRowSchema>;
 
