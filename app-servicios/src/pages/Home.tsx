@@ -8,7 +8,7 @@ import { shieldCheckmarkOutline, hammerOutline, funnelOutline, cashOutline, sear
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
-import { rawServiceRowSchema, parseRowsOrDrop } from '../lib/supabaseSchemas';
+import { feedServiceRowSchema, parseRowsOrDrop } from '../lib/supabaseSchemas';
 import { useAuth } from '../contexts/AuthContext';
 import ProfessionalDashboard from '../components/ProfessionalDashboard';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
@@ -49,14 +49,11 @@ const Home: React.FC = () => {
     let cancelled = false;
 
     const fetchData = async () => {
-      // professional_profiles/profiles ya no son legibles para terceros (RLS: solo el
-      // dueño ve su propia fila) - el feed público lee de las vistas *_public en vez de
-      // depender del embed anidado de PostgREST, que no atraviesa esa restricción.
+      // Un solo round-trip para el feed (RPC feed_services: services + categoría + nombre +
+      // verificación ya unidos) en paralelo con la lista de categorías del filtro. Antes eran
+      // 2 oleadas secuenciales y los ids de profesionales viajaban en la URL con .in().
       const [servicesResult, categoriesResult] = await Promise.all([
-        supabase
-          .from('services')
-          .select('id, title, price, price_unit, category_id, professional_id, categories ( name )')
-          .eq('is_active', true),
+        supabase.rpc('feed_services'),
         supabase.from('categories').select('id, name'),
       ]);
 
@@ -68,33 +65,20 @@ const Home: React.FC = () => {
         return;
       }
 
-      const rawServices = parseRowsOrDrop(rawServiceRowSchema, servicesResult.data ?? [], 'Home.services');
-      const professionalIds = [...new Set(rawServices.map((s) => s.professional_id))];
+      const rows = parseRowsOrDrop(feedServiceRowSchema, servicesResult.data ?? [], 'Home.feed_services');
 
-      const [profProfilesResult, profilesResult] = professionalIds.length
-        ? await Promise.all([
-            supabase
-              .from('professional_profiles_public')
-              .select('profile_id, is_verified')
-              .in('profile_id', professionalIds),
-            supabase
-              .from('profiles_public')
-              .select('id, full_name')
-              .in('id', professionalIds),
-          ])
-        : [{ data: [] }, { data: [] }];
-
-      const isVerifiedById = new Map((profProfilesResult.data ?? []).map((p) => [p.profile_id, p.is_verified]));
-      const nameById = new Map((profilesResult.data ?? []).map((p) => [p.id, p.full_name]));
-
-      const merged: ServiceFeedItem[] = rawServices.map((s) => ({
-        ...s,
+      const merged: ServiceFeedItem[] = rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        price: r.price,
+        price_unit: r.price_unit,
+        category_id: r.category_id,
+        professional_id: r.professional_id,
+        categories: r.category_name ? { name: r.category_name } : null,
         professional_profiles: {
-          profile_id: s.professional_id,
-          is_verified: isVerifiedById.get(s.professional_id) ?? false,
-          profiles: nameById.has(s.professional_id)
-            ? { full_name: nameById.get(s.professional_id)! }
-            : null,
+          profile_id: r.professional_id,
+          is_verified: r.is_verified,
+          profiles: r.professional_name ? { full_name: r.professional_name } : null,
         },
       }));
 
