@@ -8,10 +8,12 @@ import './Bookings.css';
 interface Props {
   booking: BookingListItem;
   partyLabel: string;
+  /** Info extra junto al nombre de la contraparte (ej. su calificación promedio). */
+  partyExtra?: ReactNode;
   children?: ReactNode;
 }
 
-const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, children }) => {
+const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, partyExtra, children }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const canChat = b.status !== 'cancelado';
 
@@ -28,7 +30,10 @@ const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, children }) => {
       </span>
     </div>
 
-    <p className="booking-item__party">{partyLabel} {b.otherPartyName ?? 'Usuario'}</p>
+    <p className="booking-item__party">
+      {partyLabel} {b.otherPartyName ?? 'Usuario'}
+      {partyExtra}
+    </p>
 
     {b.scheduled_at && (
       <p className="booking-item__meta">

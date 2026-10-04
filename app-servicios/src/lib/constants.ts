@@ -14,3 +14,20 @@ export const PRICE_UNITS = [
 export type PriceUnit = (typeof PRICE_UNITS)[number]['value'];
 
 export const DEFAULT_PRICE_UNIT: PriceUnit = 'servicio';
+
+/**
+ * Motivos de denuncia. Los valores deben coincidir con el CHECK de
+ * public.reports.reason (sql_docker/feature-reports.sql).
+ */
+export const REPORT_REASONS = [
+  { value: 'fraude', label: 'Fraude o estafa' },
+  { value: 'acoso', label: 'Acoso o trato abusivo' },
+  { value: 'servicio_no_prestado', label: 'Servicio no prestado / no se presentó' },
+  { value: 'contenido_inapropiado', label: 'Contenido inapropiado' },
+  { value: 'suplantacion', label: 'Suplantación de identidad' },
+  { value: 'otro', label: 'Otro' },
+] as const;
+
+export type ReportReason = (typeof REPORT_REASONS)[number]['value'];
+
+export const REPORT_DETAILS_MAX_LENGTH = 1000;
