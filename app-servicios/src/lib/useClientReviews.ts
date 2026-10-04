@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 import { supabase } from './supabaseClient';
 import { getFriendlyErrorMessage } from './errorMessages';
@@ -23,6 +23,11 @@ export function useClientReviews(professionalId: string, bookings: BookingListIt
   const [reviewedByBooking, setReviewedByBooking] = useState<Map<string, number>>(new Map());
   const [ratingByClient, setRatingByClient] = useState<Map<string, ClientRating>>(new Map());
   const [error, setError] = useState('');
+  // false hasta que termina la primera carga: sin esto el formulario "Calificar cliente" aparece
+  // un instante en reservas ya calificadas (existingRating todavía undefined).
+  const [loaded, setLoaded] = useState(false);
+  // Número de request vigente: una respuesta vieja no debe pisar el estado de una más nueva.
+  const requestId = useRef(0);
 
   const clientIdsKey = useMemo(
     () => [...new Set(bookings.map((b) => b.client_id))].sort().join(','),
@@ -30,13 +35,21 @@ export function useClientReviews(professionalId: string, bookings: BookingListIt
   );
 
   const load = useCallback(async () => {
+    const myRequest = ++requestId.current;
     const clientIds = clientIdsKey ? clientIdsKey.split(',') : [];
-    if (clientIds.length === 0) return;
+    if (clientIds.length === 0) {
+      setReviewedByBooking(new Map());
+      setRatingByClient(new Map());
+      setLoaded(true);
+      return;
+    }
 
     const [reviewsResult, ratingsResult] = await Promise.all([
       supabase.from('client_reviews').select('booking_id, rating').eq('professional_id', professionalId),
       supabase.from('client_ratings').select('client_id, rating_avg, rating_count').in('client_id', clientIds),
     ]);
+
+    if (myRequest !== requestId.current) return;
 
     if (reviewsResult.error || ratingsResult.error) {
       setError(getFriendlyErrorMessage(reviewsResult.error ?? ratingsResult.error));
@@ -47,6 +60,8 @@ export function useClientReviews(professionalId: string, bookings: BookingListIt
     const ratings = parseRowsOrDrop(clientRatingRowSchema, ratingsResult.data ?? [], 'useClientReviews.ratings');
     setReviewedByBooking(new Map(reviews.map((r) => [r.booking_id, r.rating])));
     setRatingByClient(new Map(ratings.map((r) => [r.client_id, { avg: r.rating_avg, count: r.rating_count }])));
+    setError('');
+    setLoaded(true);
   }, [professionalId, clientIdsKey]);
 
   useEffect(() => {
@@ -72,5 +87,5 @@ export function useClientReviews(professionalId: string, bookings: BookingListIt
     return true;
   };
 
-  return { reviewedByBooking, ratingByClient, error, submitReview };
+  return { reviewedByBooking, ratingByClient, loaded, error, submitReview };
 }

@@ -15,7 +15,7 @@ interface Props {
 
 const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
   const { bookings, loading, error, pendingIds, updateStatus } = useBookingsList(userId, 'professional_id');
-  const { reviewedByBooking, ratingByClient, error: reviewError, submitReview } = useClientReviews(userId, bookings);
+  const { reviewedByBooking, ratingByClient, loaded: reviewsLoaded, error: reviewError, submitReview } = useClientReviews(userId, bookings);
 
   if (loading) {
     return (
@@ -90,7 +90,7 @@ const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
               </IonButton>
             </>
           )}
-          {b.status === 'completado' && (
+          {b.status === 'completado' && reviewsLoaded && (
             <RateClientForm
               existingRating={reviewedByBooking.get(b.id)}
               onSubmit={(rating, comment) => submitReview(b, rating, comment)}

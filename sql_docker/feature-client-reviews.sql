@@ -5,9 +5,10 @@
 -- booking. Sin UPDATE/DELETE (la calificación es definitiva).
 --
 -- Visibilidad: cada parte ve las calificaciones donde participa. El
--- promedio por cliente se expone en client_ratings solo a usuarios
--- autenticados (los profesionales lo necesitan para decidir si aceptan
--- una solicitud); no se publica a anon ni se exponen comentarios.
+-- promedio por cliente se expone en client_ratings solo al propio cliente y
+-- a profesionales que tienen (o tuvieron) una reserva con él - lo necesitan
+-- para decidir si aceptan una solicitud -; no se publica a anon, no se puede
+-- consultar el promedio de usuarios sin relación y no se exponen comentarios.
 -- ============================================================
 
 create table if not exists public.client_reviews (
@@ -85,11 +86,16 @@ create trigger client_review_insert_guard
 create or replace view public.client_ratings
   with (security_invoker = false) as
 select
-  client_id,
-  round(avg(rating)::numeric, 2) as rating_avg,
+  cr.client_id,
+  round(avg(cr.rating)::numeric, 2) as rating_avg,
   count(*) as rating_count
-from public.client_reviews
-group by client_id;
+from public.client_reviews cr
+where cr.client_id = auth.uid()
+   or exists (
+     select 1 from public.bookings b
+     where b.client_id = cr.client_id and b.professional_id = auth.uid()
+   )
+group by cr.client_id;
 
 revoke all on public.client_ratings from anon, authenticated;
 grant select on public.client_ratings to authenticated;
