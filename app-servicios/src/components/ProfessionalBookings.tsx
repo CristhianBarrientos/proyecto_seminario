@@ -6,6 +6,7 @@ import { useBookingsList } from '../lib/useBookingsList';
 import { useClientReviews } from '../lib/useClientReviews';
 import BookingCard from './BookingCard';
 import RateClientForm from './RateClientForm';
+import ReportButton from './ReportButton';
 import './Bookings.css';
 
 interface Props {
@@ -95,6 +96,12 @@ const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
               onSubmit={(rating, comment) => submitReview(b, rating, comment)}
             />
           )}
+          <ReportButton
+            reporterId={userId}
+            reportedId={b.client_id}
+            reportedName={b.otherPartyName}
+            bookingId={b.id}
+          />
         </BookingCard>
         );
       })}

@@ -2,6 +2,7 @@ import { IonIcon, IonText, IonSpinner, IonButton } from '@ionic/react';
 import { hourglassOutline, closeCircleOutline } from 'ionicons/icons';
 import { useBookingsList } from '../lib/useBookingsList';
 import BookingCard from './BookingCard';
+import ReportButton from './ReportButton';
 import './Bookings.css';
 
 interface Props {
@@ -44,6 +45,12 @@ const ClientBookings: React.FC<Props> = ({ userId }) => {
               Cancelar solicitud
             </IonButton>
           )}
+          <ReportButton
+            reporterId={userId}
+            reportedId={b.professional_id}
+            reportedName={b.otherPartyName}
+            bookingId={b.id}
+          />
         </BookingCard>
       ))}
     </div>
