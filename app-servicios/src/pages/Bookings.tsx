@@ -2,6 +2,7 @@ import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonSpinner } from
 import { useAuth } from '../contexts/AuthContext';
 import ClientBookings from '../components/ClientBookings';
 import ProfessionalBookings from '../components/ProfessionalBookings';
+import NotificationsList from '../components/NotificationsList';
 
 const Bookings: React.FC = () => {
   const { user, role } = useAuth();
@@ -14,6 +15,7 @@ const Bookings: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent>
+        <NotificationsList />
         {!user || !role ? (
           <div className="ion-text-center ion-padding">
             <IonSpinner />
