@@ -3,7 +3,9 @@ import {
   hourglassOutline, closeCircleOutline, thumbsUpOutline, playOutline, checkmarkDoneOutline,
 } from 'ionicons/icons';
 import { useBookingsList } from '../lib/useBookingsList';
+import { useClientReviews } from '../lib/useClientReviews';
 import BookingCard from './BookingCard';
+import RateClientForm from './RateClientForm';
 import './Bookings.css';
 
 interface Props {
@@ -12,6 +14,7 @@ interface Props {
 
 const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
   const { bookings, loading, error, pendingIds, updateStatus } = useBookingsList(userId, 'professional_id');
+  const { reviewedByBooking, ratingByClient, error: reviewError, submitReview } = useClientReviews(userId, bookings);
 
   if (loading) {
     return (
@@ -23,7 +26,9 @@ const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
 
   return (
     <div className="bookings-list">
-      {error && <IonText color="danger"><p className="ion-padding-horizontal">{error}</p></IonText>}
+      {(error || reviewError) && (
+        <IonText color="danger"><p className="ion-padding-horizontal">{error || reviewError}</p></IonText>
+      )}
 
       {bookings.length === 0 && (
         <div className="app-empty">
@@ -33,8 +38,19 @@ const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
         </div>
       )}
 
-      {bookings.map((b) => (
-        <BookingCard key={b.id} booking={b} partyLabel="De">
+      {bookings.map((b) => {
+        const clientRating = ratingByClient.get(b.client_id);
+        return (
+        <BookingCard
+          key={b.id}
+          booking={b}
+          partyLabel="De"
+          partyExtra={clientRating && (
+            <span className="booking-item__rating" title={`${clientRating.count} calificaciones`}>
+              {' '}★ {clientRating.avg.toFixed(1)} ({clientRating.count})
+            </span>
+          )}
+        >
           {b.status === 'solicitado' && (
             <>
               <IonButton fill="solid" color="tertiary" disabled={pendingIds.has(b.id)} onClick={() => updateStatus(b.id, 'aceptado')}>
@@ -73,8 +89,15 @@ const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
               </IonButton>
             </>
           )}
+          {b.status === 'completado' && (
+            <RateClientForm
+              existingRating={reviewedByBooking.get(b.id)}
+              onSubmit={(rating, comment) => submitReview(b, rating, comment)}
+            />
+          )}
         </BookingCard>
-      ))}
+        );
+      })}
     </div>
   );
 };
