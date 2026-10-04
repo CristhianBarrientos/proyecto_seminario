@@ -48,4 +48,5 @@ as $$
   order by s.created_at desc;
 $$;
 
+revoke execute on function public.feed_services() from public;
 grant execute on function public.feed_services() to authenticated;
