@@ -53,14 +53,29 @@ const ChatModal: React.FC<Props> = ({ isOpen, onClose, bookingId, otherName }) =
     setMessages((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]));
   }, []);
 
+  // Marca como leídos los mensajes entrantes y las notificaciones de chat de esta reserva (la DB
+  // no genera otra notificación new_message mientras haya una sin leer, así que si no se limpian
+  // acá el destinatario dejaría de enterarse de los mensajes siguientes).
   const markIncomingRead = useCallback(async () => {
     if (!userId) return;
-    await supabase
-      .from('messages')
-      .update({ read_at: new Date().toISOString() })
-      .eq('booking_id', bookingId)
-      .neq('sender_id', userId)
-      .is('read_at', null);
+    const now = new Date().toISOString();
+    const [messagesResult, notificationsResult] = await Promise.all([
+      supabase
+        .from('messages')
+        .update({ read_at: now })
+        .eq('booking_id', bookingId)
+        .neq('sender_id', userId)
+        .is('read_at', null),
+      supabase
+        .from('notifications')
+        .update({ read_at: now })
+        .eq('booking_id', bookingId)
+        .eq('user_id', userId)
+        .eq('type', 'new_message')
+        .is('read_at', null),
+    ]);
+    if (messagesResult.error) console.error('[Chat] no se pudieron marcar mensajes como leídos:', messagesResult.error);
+    if (notificationsResult.error) console.error('[Chat] no se pudieron marcar notificaciones:', notificationsResult.error);
   }, [bookingId, userId]);
 
   useEffect(() => {
@@ -70,7 +85,9 @@ const ChatModal: React.FC<Props> = ({ isOpen, onClose, bookingId, otherName }) =
     setError('');
     setMessages([]);
 
-    (async () => {
+    // El historial se FUSIONA con lo que ya haya llegado (realtime o envío propio) mientras el
+    // SELECT estaba en vuelo; sobrescribir perdería esos mensajes hasta reabrir el chat.
+    const loadHistory = async (isInitial: boolean) => {
       const { data, error: loadError } = await supabase
         .from('messages')
         .select(SELECT_COLUMNS)
@@ -80,14 +97,21 @@ const ChatModal: React.FC<Props> = ({ isOpen, onClose, bookingId, otherName }) =
 
       if (cancelled) return;
       if (loadError) {
-        setError(getFriendlyErrorMessage(loadError));
+        if (isInitial) setError(getFriendlyErrorMessage(loadError));
+        else console.error('[Chat] no se pudo recargar el historial:', loadError);
       } else {
         const rows = parseRowsOrDrop(messageSchema, data ?? [], 'ChatModal.load');
-        setMessages(rows.reverse());
+        setMessages((prev) => {
+          const byId = new Map(rows.map((m) => [m.id, m]));
+          prev.forEach((m) => { if (!byId.has(m.id)) byId.set(m.id, m); });
+          return [...byId.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
+        });
         markIncomingRead();
       }
-      setLoading(false);
-    })();
+      if (isInitial) setLoading(false);
+    };
+
+    loadHistory(true);
 
     const channel = supabase
       .channel(`chat-${bookingId}`)
@@ -101,7 +125,21 @@ const ChatModal: React.FC<Props> = ({ isOpen, onClose, bookingId, otherName }) =
           if (parsed.data.sender_id !== userId) markIncomingRead();
         },
       )
-      .subscribe();
+      // read_at llega como UPDATE: sin este listener el "Visto" del emisor no se actualiza en vivo.
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `booking_id=eq.${bookingId}` },
+        (payload) => {
+          const parsed = messageSchema.safeParse(payload.new);
+          if (!parsed.success) return;
+          const updated = parsed.data;
+          setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+        },
+      )
+      // Cada reconexión recarga: cubre mensajes que llegaron durante una caída de red.
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') loadHistory(false);
+      });
 
     return () => {
       cancelled = true;

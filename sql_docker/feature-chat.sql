@@ -92,6 +92,10 @@ begin
     raise exception 'No se puede enviar mensajes en una reserva cancelada';
   end if;
 
+  -- Serializa los envios del mismo usuario: sin este lock, INSERT concurrentes pasan todos el
+  -- conteo antes de que alguno commitee y superan el limite por minuto.
+  perform pg_advisory_xact_lock(hashtext('messages:' || new.sender_id::text));
+
   if (select count(*) from public.messages m
       where m.sender_id = new.sender_id and m.created_at > now() - interval '1 minute') >= 20 then
     raise exception 'Estás enviando mensajes muy rápido. Esperá un momento.';
