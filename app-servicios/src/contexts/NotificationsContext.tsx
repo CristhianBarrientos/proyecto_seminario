@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { useIonToast } from '@ionic/react';
 import { notificationsOutline } from 'ionicons/icons';
 import { z } from 'zod';
@@ -43,8 +43,20 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [presentToast] = useIonToast();
 
+  // presentToast no tiene identidad estable garantizada entre versiones de Ionic: si estuviera en las
+  // dependencias del efecto, cada render podría bajar y recrear el canal realtime. Se lee desde un ref.
+  const toastRef = useRef(presentToast);
+  toastRef.current = presentToast;
+
+  // Usuario vigente y número de request: una respuesta de un fetch anterior (otra cuenta tras un
+  // logout/login, o un load más viejo) no debe pisar el estado actual.
+  const currentUserId = useRef<string | undefined>(userId);
+  currentUserId.current = userId;
+  const requestId = useRef(0);
+
   const load = useCallback(async () => {
     if (!userId) return;
+    const myRequest = ++requestId.current;
     const { data, error } = await supabase
       .from('notifications')
       .select('id, type, booking_id, title, body, read_at, created_at')
@@ -52,15 +64,26 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
 
+    if (myRequest !== requestId.current || currentUserId.current !== userId) return;
     if (error) {
       console.error('[Notifications] no se pudieron cargar:', error);
       return;
     }
-    setNotifications(parseRowsOrDrop(notificationSchema, data ?? [], 'Notifications.load'));
+
+    const fetched = parseRowsOrDrop(notificationSchema, data ?? [], 'Notifications.load');
+    // Se conservan las que llegaron por realtime mientras el SELECT estaba en vuelo.
+    setNotifications((prev) => {
+      const byId = new Map(fetched.map((n) => [n.id, n]));
+      prev.forEach((n) => { if (!byId.has(n.id)) byId.set(n.id, n); });
+      return [...byId.values()]
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .slice(0, PAGE_SIZE);
+    });
   }, [userId]);
 
   useEffect(() => {
     if (!userId) {
+      requestId.current += 1;
       setNotifications([]);
       return;
     }
@@ -79,7 +102,7 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
           }
           const n = parsed.data;
           setNotifications((prev) => (prev.some((p) => p.id === n.id) ? prev : [n, ...prev].slice(0, PAGE_SIZE)));
-          presentToast({
+          toastRef.current({
             message: n.body ? `${n.title}: ${n.body}` : n.title,
             duration: 4000,
             position: 'top',
@@ -87,12 +110,27 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
           });
         },
       )
-      .subscribe();
+      // Marcar como leídas en otro dispositivo/pestaña de la misma cuenta debe reflejarse acá.
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const parsed = notificationSchema.safeParse(payload.new);
+          if (!parsed.success) return;
+          const updated = parsed.data;
+          setNotifications((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        },
+      )
+      // Cada (re)conexión del canal recarga: cubre el hueco entre el SELECT inicial y la
+      // suscripción, y los eventos perdidos durante una desconexión de red.
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') load();
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, load, presentToast]);
+  }, [userId, load]);
 
   const markAllRead = useCallback(async () => {
     if (!userId) return;
