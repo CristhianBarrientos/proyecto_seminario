@@ -1,5 +1,5 @@
 import { Navigate, Route } from 'react-router-dom';
-import { IonTabs, IonRouterOutlet, IonTabBar, IonTabButton, IonIcon, IonLabel } from '@ionic/react';
+import { IonTabs, IonRouterOutlet, IonTabBar, IonTabButton, IonIcon, IonLabel, IonBadge } from '@ionic/react';
 import { compassOutline, clipboardOutline, personCircleOutline } from 'ionicons/icons';
 import Home from './pages/Home';
 import Bookings from './pages/Bookings';
@@ -8,6 +8,7 @@ import EditProfessionalProfile from './pages/EditProfessionalProfile';
 import MyServices from './pages/MyServices';
 import ProfessionalDetail from './pages/ProfessionalDetail';
 import { useAuth } from './contexts/AuthContext';
+import { useNotifications } from './contexts/NotificationsContext';
 
 // Rutas que solo tienen sentido para el rol "profesional" (formularios de
 // perfil/servicios profesionales). Un cliente que navega ahí por URL directa
@@ -33,6 +34,8 @@ const RequiresProfessionalProfile: React.FC<{ children: React.ReactNode }> = ({ 
 };
 
 const Tabs: React.FC = () => {
+  const { unreadCount } = useNotifications();
+
   return (
     <IonTabs>
       <IonRouterOutlet>
@@ -69,6 +72,7 @@ const Tabs: React.FC = () => {
         <IonTabButton tab="bookings" href="/tabs/bookings">
           <IonIcon icon={clipboardOutline} />
           <IonLabel>Solicitudes</IonLabel>
+          {unreadCount > 0 && <IonBadge color="danger">{unreadCount > 9 ? '9+' : unreadCount}</IonBadge>}
         </IonTabButton>
         <IonTabButton tab="profile" href="/tabs/profile">
           <IonIcon icon={personCircleOutline} />
