@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { IonSpinner } from '@ionic/react';
 import { supabase } from '../lib/supabaseClient';
+import { dashboardMarketStatsSchema } from '../lib/supabaseSchemas';
 import './ProfessionalDashboard.css';
 
 interface Props {
@@ -39,6 +40,9 @@ interface ServiceRow {
   professional_id: string;
 }
 
+// Precio promedio del mercado por categoría (sin el propio usuario), ya agregado en la DB.
+type MarketPriceByCategory = Map<number, number>;
+
 function buildMonthlyBuckets(bookings: BookingRow[], predicate: (b: BookingRow) => boolean, valueOf: (b: BookingRow) => number) {
   const now = new Date();
   const buckets: { key: string; label: string; value: number }[] = [];
@@ -66,21 +70,19 @@ const ProfessionalDashboard: React.FC<Props> = ({ userId }) => {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [ingresosAprox, setIngresosAprox] = useState(0);
   const [ownServices, setOwnServices] = useState<ServiceRow[]>([]);
-  const [marketServices, setMarketServices] = useState<ServiceRow[]>([]);
+  const [marketPriceByCategory, setMarketPriceByCategory] = useState<MarketPriceByCategory>(new Map());
   const [categoryNames, setCategoryNames] = useState<Map<number, string>>(new Map());
 
   useEffect(() => {
     const load = async () => {
-      const [ownRatingResult, allRatingsResult, servicesResult, bookingsResult, marketServicesResult, categoriesResult] = await Promise.all([
+      // Los agregados de mercado vienen calculados por la DB (RPC); antes se descargaban TODA la tabla
+      // de calificaciones y TODOS los servicios activos para promediarlos acá.
+      const [ownRatingResult, servicesResult, bookingsResult, marketStatsResult, categoriesResult] = await Promise.all([
         supabase
           .from('professional_ratings')
           .select('rating_avg, rating_count')
           .eq('professional_id', userId)
           .maybeSingle(),
-        supabase
-          .from('professional_ratings')
-          .select('professional_id, rating_avg')
-          .order('rating_avg', { ascending: false }),
         supabase
           .from('services')
           .select('category_id, price')
@@ -90,23 +92,24 @@ const ProfessionalDashboard: React.FC<Props> = ({ userId }) => {
           .from('bookings')
           .select('status, price_agreed, created_at')
           .eq('professional_id', userId),
-        supabase
-          .from('services')
-          .select('category_id, price, professional_id')
-          .eq('is_active', true),
+        supabase.rpc('dashboard_market_stats'),
         supabase.from('categories').select('id, name'),
       ]);
 
       setRatingAvg(ownRatingResult.data?.rating_avg ?? null);
       setRatingCount(ownRatingResult.data?.rating_count ?? 0);
 
-      const others = (allRatingsResult.data ?? []).filter((r) => r.professional_id !== userId);
-      setMarketRatingAvg(others.length > 0 ? others.reduce((sum, r) => sum + r.rating_avg, 0) / others.length : null);
+      const marketStats = dashboardMarketStatsSchema.safeParse(marketStatsResult.data);
+      if (marketStats.success) {
+        setMarketRatingAvg(marketStats.data.market_rating_avg);
+        setMarketPriceByCategory(new Map(marketStats.data.price_by_category.map((c) => [c.category_id, c.avg_price])));
+      } else {
+        console.error('[Dashboard] market stats inválidas', marketStatsResult.error ?? marketStats.error);
+      }
 
       const ownServiceRows = (servicesResult.data ?? []) as ServiceRow[];
       setActiveServices(ownServiceRows.length);
       setOwnServices(ownServiceRows.map((s) => ({ ...s, professional_id: userId })));
-      setMarketServices((marketServicesResult.data ?? []) as ServiceRow[]);
       setCategoryNames(new Map((categoriesResult.data ?? []).map((c) => [c.id, c.name])));
 
       const rows = (bookingsResult.data ?? []) as BookingRow[];
@@ -194,16 +197,13 @@ const ProfessionalDashboard: React.FC<Props> = ({ userId }) => {
 
     const rows: { label: string; mine: number; market: number }[] = [];
     for (const [categoryId, prices] of ownByCategory) {
-      const marketPrices = marketServices
-        .filter((s) => s.category_id === categoryId && s.professional_id !== userId)
-        .map((s) => s.price);
-      if (marketPrices.length === 0) continue;
+      const market = marketPriceByCategory.get(categoryId);
+      if (market === undefined) continue;
       const mine = prices.reduce((a, b) => a + b, 0) / prices.length;
-      const market = marketPrices.reduce((a, b) => a + b, 0) / marketPrices.length;
       rows.push({ label: categoryNames.get(categoryId) ?? 'Categoría', mine, market });
     }
     return rows;
-  }, [ownServices, marketServices, categoryNames, userId]);
+  }, [ownServices, marketPriceByCategory, categoryNames]);
 
   if (loading) {
     return (
