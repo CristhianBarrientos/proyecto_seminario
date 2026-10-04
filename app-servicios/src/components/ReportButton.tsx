@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonModal, IonSelect, IonSelectOption,
   IonText, IonTextarea, IonTitle, IonToolbar,
@@ -28,8 +28,13 @@ const ReportButton: React.FC<Props> = ({ reporterId, reportedId, reportedName, b
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+  // Se incrementa al cerrar el modal: una respuesta tardía de un envío anterior no debe
+  // mostrar "Denuncia enviada" ni un error viejo en el modal reabierto.
+  const attempt = useRef(0);
 
   const close = () => {
+    attempt.current += 1;
+    setSaving(false);
     setOpen(false);
     setReason('');
     setDetails('');
@@ -39,6 +44,7 @@ const ReportButton: React.FC<Props> = ({ reporterId, reportedId, reportedName, b
 
   const submit = async () => {
     if (saving || !reason) return;
+    const myAttempt = attempt.current;
     setSaving(true);
     setError('');
     try {
@@ -49,13 +55,14 @@ const ReportButton: React.FC<Props> = ({ reporterId, reportedId, reportedName, b
         reason,
         details: details.trim() || null,
       });
+      if (myAttempt !== attempt.current) return;
       if (insertError) {
         setError(getFriendlyErrorMessage(insertError));
         return;
       }
       setSent(true);
     } finally {
-      setSaving(false);
+      if (myAttempt === attempt.current) setSaving(false);
     }
   };
 

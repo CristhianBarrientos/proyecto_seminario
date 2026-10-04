@@ -81,6 +81,10 @@ begin
     raise exception 'Solo podés denunciar a usuarios con los que tuviste una reserva';
   end if;
 
+  -- Serializa las denuncias del mismo usuario: sin este lock, INSERT concurrentes pasan todos
+  -- el conteo antes de que alguno commitee y superan el limite.
+  perform pg_advisory_xact_lock(hashtext('reports:' || new.reporter_id::text));
+
   if (select count(*) from public.reports r
       where r.reporter_id = new.reporter_id and r.created_at > now() - interval '24 hours') >= 5 then
     raise exception 'Alcanzaste el límite de denuncias por día. Intentá mañana.';
