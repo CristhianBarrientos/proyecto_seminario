@@ -127,6 +127,12 @@ const ProfessionalDetail: React.FC = () => {
     setSubmitting(false);
 
     if (error) {
+      // Índice único parcial (sql_docker/fix-solicitud-unica-por-servicio.sql): ya hay una solicitud activa.
+      if (error.code === '23505' && error.message.includes('bookings_one_active_per_service_idx')) {
+        console.error('[Error real]', error);
+        setRequestError('Ya tenés una solicitud activa para este servicio. Podés verla en Solicitudes.');
+        return;
+      }
       setRequestError(getFriendlyErrorMessage(error));
       return;
     }
