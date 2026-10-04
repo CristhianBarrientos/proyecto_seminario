@@ -1,13 +1,19 @@
+import { lazy } from 'react';
 import { Navigate, Route } from 'react-router-dom';
 import { IonTabs, IonRouterOutlet, IonTabBar, IonTabButton, IonIcon, IonLabel } from '@ionic/react';
 import { compassOutline, clipboardOutline, personCircleOutline } from 'ionicons/icons';
 import Home from './pages/Home';
-import Bookings from './pages/Bookings';
-import Profile from './pages/Profile';
-import EditProfessionalProfile from './pages/EditProfessionalProfile';
-import MyServices from './pages/MyServices';
-import ProfessionalDetail from './pages/ProfessionalDetail';
+import LazyRoute from './components/LazyRoute';
 import { useAuth } from './contexts/AuthContext';
+
+// Home queda eager (es la pantalla de aterrizaje); el resto se descarga bajo demanda
+// para no meter todas las pantallas en el bundle inicial.
+const Bookings = lazy(() => import('./pages/Bookings'));
+const Profile = lazy(() => import('./pages/Profile'));
+const EditProfessionalProfile = lazy(() => import('./pages/EditProfessionalProfile'));
+const MyServices = lazy(() => import('./pages/MyServices'));
+const ProfessionalDetail = lazy(() => import('./pages/ProfessionalDetail'));
+
 
 // Rutas que solo tienen sentido para el rol "profesional" (formularios de
 // perfil/servicios profesionales). Un cliente que navega ahí por URL directa
@@ -37,14 +43,14 @@ const Tabs: React.FC = () => {
     <IonTabs>
       <IonRouterOutlet>
         <Route path="/tabs/home" element={<Home />} />
-        <Route path="/tabs/home/:id" element={<ProfessionalDetail />} />
-        <Route path="/tabs/bookings" element={<Bookings />} />
-        <Route path="/tabs/profile" element={<Profile />} />
+        <Route path="/tabs/home/:id" element={<LazyRoute><ProfessionalDetail /></LazyRoute>} />
+        <Route path="/tabs/bookings" element={<LazyRoute><Bookings /></LazyRoute>} />
+        <Route path="/tabs/profile" element={<LazyRoute><Profile /></LazyRoute>} />
         <Route
           path="/tabs/profile/edit"
           element={
             <ProfessionalOnly>
-              <EditProfessionalProfile />
+              <LazyRoute><EditProfessionalProfile /></LazyRoute>
             </ProfessionalOnly>
           }
         />
@@ -53,7 +59,7 @@ const Tabs: React.FC = () => {
           element={
             <ProfessionalOnly>
               <RequiresProfessionalProfile>
-                <MyServices />
+                <LazyRoute><MyServices /></LazyRoute>
               </RequiresProfessionalProfile>
             </ProfessionalOnly>
           }
