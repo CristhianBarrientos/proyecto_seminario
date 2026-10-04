@@ -50,6 +50,29 @@ export const bookingRowSchema = z.object({
   services: bookingServiceRefSchema,
 });
 
+// Fila plana de la RPC my_bookings(as_role) (sql_docker/perf-solicitudes-dashboard-rpc.sql):
+// reserva + servicio + nombre de la contraparte en un solo round-trip.
+export const myBookingRowSchema = z.object({
+  id: z.string(),
+  status: z.enum(['solicitado', 'aceptado', 'en_curso', 'completado', 'cancelado']),
+  scheduled_at: z.string().nullable(),
+  price_agreed: z.number().nullable(),
+  notes: z.string().nullable(),
+  created_at: z.string(),
+  client_id: z.string(),
+  professional_id: z.string(),
+  service_title: z.string().nullable(),
+  service_price_unit: z.string().nullable(),
+  other_party_name: z.string().nullable(),
+});
+
+// Agregados de mercado para el dashboard del profesional (RPC dashboard_market_stats).
+export const dashboardMarketStatsSchema = z.object({
+  market_rating_avg: z.number().nullable(),
+  price_by_category: z.array(z.object({ category_id: z.number(), avg_price: z.number() })),
+});
+export type DashboardMarketStats = z.infer<typeof dashboardMarketStatsSchema>;
+
 export const bookingRowListSchema = z.array(bookingRowSchema);
 export type BookingRow = z.infer<typeof bookingRowSchema>;
 export type BookingStatus = BookingRow['status'];

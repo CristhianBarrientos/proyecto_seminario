@@ -4,7 +4,7 @@ import {
 } from 'ionicons/icons';
 import { supabase } from './supabaseClient';
 import { getFriendlyErrorMessage } from './errorMessages';
-import { bookingRowSchema, parseRowsOrDrop, type BookingRow, type BookingStatus } from './supabaseSchemas';
+import { myBookingRowSchema, parseRowsOrDrop, type BookingRow, type BookingStatus } from './supabaseSchemas';
 
 export const STATUS_META: Record<BookingStatus, { label: string; icon: string }> = {
   solicitado: { label: 'Solicitado', icon: hourglassOutline },
@@ -20,8 +20,6 @@ export interface BookingListItem extends BookingRow {
 
 type OwnField = 'client_id' | 'professional_id';
 
-const otherFieldOf = (ownField: OwnField): OwnField => (ownField === 'client_id' ? 'professional_id' : 'client_id');
-
 /**
  * Fetch + acciones compartidas entre ClientBookings y ProfessionalBookings -
  * ambas listas son la misma tabla vista desde el lado opuesto (client_id vs
@@ -30,18 +28,17 @@ const otherFieldOf = (ownField: OwnField): OwnField => (ownField === 'client_id'
  * cada una arma con su propio JSX.
  */
 export function useBookingsList(userId: string, ownField: OwnField) {
-  const otherField = otherFieldOf(ownField);
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('id, status, scheduled_at, price_agreed, notes, created_at, client_id, professional_id, services ( title, price_unit )')
-      .eq(ownField, userId)
-      .order('created_at', { ascending: false });
+    // Una sola RPC (reservas propias + servicio + nombre de la contraparte). Antes eran dos
+    // requests encadenadas: bookings y luego profiles_public con .in(ids).
+    const { data, error } = await supabase.rpc('my_bookings', {
+      as_role: ownField === 'client_id' ? 'client' : 'professional',
+    });
 
     if (error) {
       setError(getFriendlyErrorMessage(error));
@@ -49,18 +46,24 @@ export function useBookingsList(userId: string, ownField: OwnField) {
       return;
     }
 
-    const rows = parseRowsOrDrop(bookingRowSchema, data ?? [], `useBookingsList.${ownField}`);
-    const otherIds = [...new Set(rows.map((r) => r[otherField]))];
+    const rows = parseRowsOrDrop(myBookingRowSchema, data ?? [], `useBookingsList.${ownField}`);
 
-    const { data: profilesData } = otherIds.length
-      ? await supabase.from('profiles_public').select('id, full_name').in('id', otherIds)
-      : { data: [] as { id: string; full_name: string }[] };
-
-    const nameById = new Map((profilesData ?? []).map((p) => [p.id, p.full_name]));
-
-    setBookings(rows.map((r) => ({ ...r, otherPartyName: nameById.get(r[otherField]) ?? null })));
+    setBookings(rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      scheduled_at: r.scheduled_at,
+      price_agreed: r.price_agreed,
+      notes: r.notes,
+      created_at: r.created_at,
+      client_id: r.client_id,
+      professional_id: r.professional_id,
+      services: r.service_title !== null && r.service_price_unit !== null
+        ? { title: r.service_title, price_unit: r.service_price_unit }
+        : null,
+      otherPartyName: r.other_party_name,
+    })));
     setLoading(false);
-  }, [userId, ownField, otherField]);
+  }, [ownField]);
 
   useEffect(() => {
     load();
