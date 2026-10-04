@@ -4,7 +4,9 @@ import {
 } from 'ionicons/icons';
 import { useBookingsList } from '../lib/useBookingsList';
 import { useClientReviews } from '../lib/useClientReviews';
+import { useBookingsView, isHideable } from '../lib/useBookingsView';
 import BookingCard from './BookingCard';
+import BookingsToolbar from './BookingsToolbar';
 import RateClientForm from './RateClientForm';
 import ReportButton from './ReportButton';
 import './Bookings.css';
@@ -14,7 +16,8 @@ interface Props {
 }
 
 const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
-  const { bookings, loading, error, pendingIds, updateStatus } = useBookingsList(userId, 'professional_id');
+  const { bookings, loading, error, pendingIds, updateStatus, hideBookings } = useBookingsList(userId, 'professional_id');
+  const view = useBookingsView(bookings, hideBookings);
   const { reviewedByBooking, ratingByClient, loaded: reviewsLoaded, error: reviewError, submitReview } = useClientReviews(userId, bookings);
 
   if (loading) {
@@ -39,13 +42,36 @@ const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
         </div>
       )}
 
-      {bookings.map((b) => {
+      {bookings.length > 0 && (
+        <BookingsToolbar
+          filter={view.filter}
+          onFilterChange={view.setFilter}
+          canceledLabel="Rechazadas"
+          selectMode={view.selectMode}
+          onToggleSelectMode={view.toggleSelectMode}
+          hideableCount={view.hideableCount}
+          selectedCount={view.selected.size}
+          allSelected={view.allSelected}
+          onToggleAll={view.toggleAll}
+          onHideSelected={view.hideSelected}
+          hiding={view.hiding}
+        />
+      )}
+
+      {bookings.length > 0 && view.filtered.length === 0 && (
+        <p className="ion-padding-horizontal">No hay solicitudes en este filtro.</p>
+      )}
+
+      {view.filtered.map((b) => {
         const clientRating = ratingByClient.get(b.client_id);
         return (
         <BookingCard
           key={b.id}
           booking={b}
           partyLabel="De"
+          selection={view.selectMode && isHideable(b)
+            ? { selected: view.selected.has(b.id), onToggle: () => view.toggle(b.id) }
+            : undefined}
           partyExtra={clientRating && (
             <span className="booking-item__rating" title={`${clientRating.count} calificaciones`}>
               {' '}★ {clientRating.avg.toFixed(1)} ({clientRating.count})
