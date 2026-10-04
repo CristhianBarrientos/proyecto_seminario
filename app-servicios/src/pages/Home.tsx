@@ -36,32 +36,14 @@ interface Category {
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  // El rol ya lo resuelve AuthContext - antes Home repetía el mismo SELECT a profiles.
+  const { user, role } = useAuth();
   const [services, setServices] = useState<ServiceFeedItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchText, setSearchText] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [role, setRole] = useState<'cliente' | 'profesional' | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-
-    supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (!cancelled) setRole(data?.role ?? null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
