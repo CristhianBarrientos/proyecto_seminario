@@ -1,16 +1,23 @@
-import type { ReactNode } from 'react';
-import { IonIcon } from '@ionic/react';
-import { calendarOutline, cashOutline, chatbubbleOutline, constructOutline } from 'ionicons/icons';
+import { useState, type ReactNode } from 'react';
+import { IonButton, IonIcon } from '@ionic/react';
+import { calendarOutline, cashOutline, chatbubbleOutline, chatbubblesOutline, constructOutline } from 'ionicons/icons';
 import { STATUS_META, type BookingListItem } from '../lib/useBookingsList';
+import ChatModal from './ChatModal';
 import './Bookings.css';
 
 interface Props {
   booking: BookingListItem;
   partyLabel: string;
+  /** Info extra junto al nombre de la contraparte (ej. su calificación promedio). */
+  partyExtra?: ReactNode;
   children?: ReactNode;
 }
 
-const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, children }) => (
+const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, partyExtra, children }) => {
+  const [chatOpen, setChatOpen] = useState(false);
+  const canChat = b.status !== 'cancelado';
+
+  return (
   <div className="app-card booking-item">
     <div className="booking-item__header">
       <p className="booking-item__title">
@@ -23,7 +30,10 @@ const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, children }) => (
       </span>
     </div>
 
-    <p className="booking-item__party">{partyLabel} {b.otherPartyName ?? 'Usuario'}</p>
+    <p className="booking-item__party">
+      {partyLabel} {b.otherPartyName ?? 'Usuario'}
+      {partyExtra}
+    </p>
 
     {b.scheduled_at && (
       <p className="booking-item__meta">
@@ -46,8 +56,28 @@ const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, children }) => (
       </p>
     )}
 
-    {children && <div className="booking-item__actions">{children}</div>}
+    {(children || canChat) && (
+      <div className="booking-item__actions">
+        {children}
+        {canChat && (
+          <IonButton fill="outline" color="tertiary" size="small" onClick={() => setChatOpen(true)}>
+            <IonIcon icon={chatbubblesOutline} slot="start" />
+            Chat
+          </IonButton>
+        )}
+      </div>
+    )}
+
+    {canChat && (
+      <ChatModal
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        bookingId={b.id}
+        otherName={b.otherPartyName}
+      />
+    )}
   </div>
-);
+  );
+};
 
 export default BookingCard;
