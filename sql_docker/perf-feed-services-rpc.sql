@@ -48,4 +48,4 @@ as $$
   order by s.created_at desc;
 $$;
 
-grant execute on function public.feed_services() to authenticated, anon;
+grant execute on function public.feed_services() to authenticated;
