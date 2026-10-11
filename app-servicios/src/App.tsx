@@ -6,6 +6,7 @@ import Tabs from './Tabs';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
+import IdleSessionGuard from './components/IdleSessionGuard';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -56,6 +57,7 @@ const App: React.FC = () => (
   <IonApp>
     <ThemeProvider>
       <AuthProvider>
+        <IdleSessionGuard />
         <NotificationsProvider>
           <AppRoutes />
         </NotificationsProvider>

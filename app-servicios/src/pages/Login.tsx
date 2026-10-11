@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   IonPage, IonContent,
   IonItem, IonLabel, IonInput, IonButton, IonSegment,
@@ -11,6 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
+import { clearIdleLogoutFlag, peekIdleLogoutFlag } from '../lib/idleSession';
 import { isValidEmail, isValidFullName, MIN_PASSWORD_LENGTH } from '../lib/validation';
 import './Login.css';
 
@@ -27,6 +28,12 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [letterAnim, setLetterAnim] = useState(false);
   const [letterSettle, setLetterSettle] = useState(false);
+  // Si la sesión se cerró por inactividad, se explica una sola vez: se lee sin efectos
+  // secundarios (el inicializador debe ser puro) y la marca se borra en un efecto.
+  const [idleLogoutNotice] = useState(peekIdleLogoutFlag);
+  useEffect(() => {
+    clearIdleLogoutFlag();
+  }, []);
 
   const emailInvalid = touched && !isValidEmail(email);
   const passwordInvalid = touched && password.trim().length < MIN_PASSWORD_LENGTH;
@@ -202,6 +209,12 @@ const Login: React.FC = () => {
           {passwordInvalid && (
             <IonText color="danger">
               <p className="field-error">La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres.</p>
+            </IonText>
+          )}
+
+          {idleLogoutNotice && !error && (
+            <IonText color="medium">
+              <p role="status">Tu sesión se cerró por inactividad. Ingresá de nuevo para continuar.</p>
             </IonText>
           )}
 
