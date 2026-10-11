@@ -12,16 +12,6 @@ import { z } from 'zod';
 
 const categoryRefSchema = z.object({ name: z.string() }).nullable();
 
-export const rawServiceRowSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  price: z.number(),
-  price_unit: z.string(),
-  category_id: z.number(),
-  professional_id: z.string(),
-  categories: categoryRefSchema,
-});
-
 // Fila plana de la RPC feed_services() (sql_docker/perf-feed-services-rpc.sql): servicios activos
 // ya unidos con categoría, nombre del profesional y verificación en un solo round-trip.
 export const feedServiceRowSchema = z.object({
@@ -36,7 +26,6 @@ export const feedServiceRowSchema = z.object({
   is_verified: z.boolean(),
 });
 
-export type RawServiceRow = z.infer<typeof rawServiceRowSchema>;
 
 export const serviceItemSchema = z.object({
   id: z.string(),
@@ -121,12 +110,13 @@ export function parseRowsOrDrop<T>(schema: z.ZodType<T>, rows: unknown[], contex
 }
 
 /**
- * Mensaje visible cuando parseRowsReporting descartó filas: distingue "no se pudo mostrar nada"
- * (todas descartadas) de "faltan algunos". null si no se descartó ninguna.
+ * Aviso visible cuando parseRowsReporting descartó filas. Si se descartó TODO (kept === 0) es un
+ * error: la pantalla tiene que mostrarlo como tal y no como "no hay datos". Si fue parcial es solo
+ * un aviso (warning) que no debe tapar el contenido ni el estado vacío. Ambos '' si no se descartó nada.
  */
-export function droppedRowsMessage(dropped: number, kept: number, noun: string): string | null {
-  if (dropped === 0) return null;
+export function droppedRowsNotice(dropped: number, kept: number): { error: string; warning: string } {
+  if (dropped === 0) return { error: '', warning: '' };
   return kept === 0
-    ? `No pudimos mostrar ${noun}. Intentá de nuevo más tarde.`
-    : `Algunos ${noun} no se pudieron mostrar.`;
+    ? { error: 'No pudimos mostrar el contenido. Intentá de nuevo más tarde.', warning: '' }
+    : { error: '', warning: 'Algunos elementos no se pudieron mostrar.' };
 }
