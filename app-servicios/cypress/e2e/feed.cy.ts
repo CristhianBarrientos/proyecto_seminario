@@ -6,12 +6,14 @@
 // la altura real del header (no un valor fijo). Sin { force: true }: los checks de visibilidad y de
 // cobertura de Cypress siguen validando que un usuario puede ver y tocar la tarjeta.
 const scrollToCard = (name: string) => {
-  cy.contains('.service-card', name).then(($card) => {
-    cy.get('ion-header:visible').first().then(($header) => {
-      const headerBottom = $header[0].getBoundingClientRect().bottom;
-      cy.get('ion-content:visible').first().then(($content) => {
-        const content = $content[0] as unknown as { getScrollElement(): Promise<HTMLElement> };
-        cy.wrap(content.getScrollElement()).then(($scroll) => {
+  cy.get('ion-header:visible').first().then(($header) => {
+    cy.get('ion-content:visible').first().then(($content) => {
+      const content = $content[0] as unknown as { getScrollElement(): Promise<HTMLElement> };
+      cy.wrap(content.getScrollElement()).then(($scroll) => {
+        // La tarjeta se mide aca adentro, justo antes de scrollear, no antes: si el feed se
+        // re-renderiza entre medio, el elemento y los offsets capturados quedarian obsoletos.
+        cy.contains('.service-card', name).then(($card) => {
+          const headerBottom = $header[0].getBoundingClientRect().bottom;
           $scroll[0].scrollTop += $card[0].getBoundingClientRect().top - (headerBottom + 8);
         });
       });
