@@ -9,7 +9,24 @@
 -- Reemplazo: función RPC server-side con ST_DWithin que devuelve
 -- distancia (km) en vez de coordenadas crudas, y la vista pública deja
 -- de exponer location.
+--
+-- IMPORTANTE (#31): la RPC de este archivo FUE REEMPLAZADA por
+-- fix-nearby-professionals-enmascarado.sql (distancia exacta + EXECUTE a
+-- anon + sin tope = trilateración). Si se vuelve a correr este archivo hay
+-- que aplicar ese DESPUÉS, o la RPC queda vulnerable.
+--
+-- #32: todo el script va en UNA transacción. Antes eran sentencias DDL
+-- sueltas: con `psql -f` (o el SQL Editor, que autocommitea cada sentencia)
+-- un fallo del CREATE VIEW o de un GRANT después de que el DROP VIEW ya se
+-- había commiteado dejaba la vista inexistente, y Home.tsx/ProfessionalDetail
+-- (que hacen SELECT sobre professional_profiles_public) fallaban hasta que
+-- alguien volviera a correr el fix a mano. Con BEGIN/COMMIT, si algo falla
+-- se revierte todo y la vista queda como estaba.
+-- Nota: con `psql --single-transaction` el BEGIN/COMMIT internos solo emiten
+-- un WARNING ("ya hay una transacción"/"no hay transacción"), sin efecto.
 -- ============================================================
+
+begin;
 
 -- ------------------------------------------------------------
 -- 1. Vista pública sin location.
@@ -76,3 +93,5 @@ $$;
 
 grant execute on function public.nearby_professionals(double precision, double precision, double precision)
   to authenticated, anon;
+
+commit;
