@@ -1,7 +1,9 @@
 import { Navigate, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+import { Capacitor } from '@capacitor/core';
 import Login from './pages/Login';
+import Landing from './pages/Landing';
 import Tabs from './Tabs';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -44,9 +46,14 @@ const AppRoutes: React.FC = () => {
           path="/tabs/*"
           element={session ? <Tabs /> : <Navigate to="/login" replace />}
         />
+        {/* La landing es solo web: la app nativa (APK) entra directo a login / home. */}
         <Route
           path="/"
-          element={<Navigate to={session ? '/tabs/home' : '/login'} replace />}
+          element={
+            Capacitor.isNativePlatform()
+              ? <Navigate to={session ? '/tabs/home' : '/login'} replace />
+              : <Landing />
+          }
         />
       </IonRouterOutlet>
     </IonReactRouter>
