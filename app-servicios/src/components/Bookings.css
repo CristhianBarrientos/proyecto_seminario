@@ -97,9 +97,10 @@
 .bookings-toolbar__hint { margin: 0; font-size: 0.8rem; color: var(--ion-color-medium); }
 
 /* Botón flotante de notificaciones (solo en Solicitudes) */
-.notifications-fab { position: relative; }
+/* El badge va fuera de IonFabButton (que recorta su contenido con overflow hidden) en un wrapper. */
+.notifications-fab { position: relative; display: inline-block; }
 .notifications-fab__badge {
-  position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px;
+  position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; pointer-events: none;
   font-size: 0.65rem; display: flex; align-items: center; justify-content: center; border-radius: 999px;
 }
 .notifications-popover { --width: 320px; --max-height: 70vh; }

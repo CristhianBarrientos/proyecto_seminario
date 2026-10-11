@@ -21,9 +21,11 @@ const NotificationsFab: React.FC<Props> = ({ onOpenChat }) => {
   const [popoverEvent, setPopoverEvent] = useState<Event | undefined>(undefined);
 
   const unread = notifications.filter((n) => !n.read_at);
-  // Si no queda nada sin leer, el botón ni aparece - salvo que el popover ya esté abierto (p. ej.
-  // se vació por un markRead en otra pestaña de la misma cuenta): no lo hacemos desaparecer de golpe.
-  if (unread.length === 0 && !popoverEvent) return null;
+  // Si no queda nada sin leer el botón se oculta, salvo que el popover esté abierto (p. ej. se vació
+  // por un markRead en otra pestaña). El IonPopover SIEMPRE queda montado: si el componente
+  // devolviera null al tocar la última notificación, se desmontaría en pleno cierre y Ionic podría
+  // dejar el overlay colgado.
+  const showFab = unread.length > 0 || !!popoverEvent;
 
   const handleClick = (n: AppNotification) => {
     markRead(n.id);
@@ -35,18 +37,21 @@ const NotificationsFab: React.FC<Props> = ({ onOpenChat }) => {
 
   return (
     <>
-      <IonFabButton
-        size="small"
-        color="light"
-        className="notifications-fab"
-        onClick={(e) => setPopoverEvent(e.nativeEvent)}
-        aria-label={`Notificaciones (${unreadCount} sin leer)`}
-      >
-        <IonIcon icon={notificationsOutline} />
-        {unreadCount > 0 && (
-          <IonBadge color="danger" className="notifications-fab__badge">{unreadCount > 9 ? '9+' : unreadCount}</IonBadge>
-        )}
-      </IonFabButton>
+      {showFab && (
+        <div className="notifications-fab">
+          <IonFabButton
+            size="small"
+            color="light"
+            onClick={(e) => setPopoverEvent(e.nativeEvent)}
+            aria-label={`Notificaciones (${unreadCount} sin leer)`}
+          >
+            <IonIcon icon={notificationsOutline} />
+          </IonFabButton>
+          {unreadCount > 0 && (
+            <IonBadge color="danger" className="notifications-fab__badge">{unreadCount > 9 ? '9+' : unreadCount}</IonBadge>
+          )}
+        </div>
+      )}
 
       <IonPopover
         isOpen={!!popoverEvent}

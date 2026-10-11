@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
 import { IonIcon, IonText, IonSpinner, IonButton } from '@ionic/react';
 import { hourglassOutline, closeCircleOutline } from 'ionicons/icons';
 import { useBookingsList } from '../lib/useBookingsList';
 import { useBookingsView, isHideable } from '../lib/useBookingsView';
-import { useNotifications } from '../contexts/NotificationsContext';
+import { useUnreadChatIds, useRequestedChat } from '../lib/useChatDeepLink';
 import BookingCard from './BookingCard';
 import BookingsToolbar from './BookingsToolbar';
 import ReportButton from './ReportButton';
@@ -19,18 +18,8 @@ interface Props {
 const ClientBookings: React.FC<Props> = ({ userId, openChatBookingId, onChatHandled }) => {
   const { bookings, loading, error, pendingIds, updateStatus, hideBookings } = useBookingsList(userId, 'client_id');
   const view = useBookingsView(bookings, hideBookings);
-  const { notifications } = useNotifications();
-
-  // Punto rojo en el botón de Chat: hay una notificación new_message sin leer de esa reserva.
-  const unreadChatIds = new Set(
-    notifications.filter((n) => n.type === 'new_message' && !n.read_at && n.booking_id).map((n) => n.booking_id as string),
-  );
-
-  // Si el filtro actual esconde la reserva pedida desde el FAB, mostrarla primero.
-  useEffect(() => {
-    if (openChatBookingId) view.revealBooking(openChatBookingId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openChatBookingId]);
+  const unreadChatIds = useUnreadChatIds();
+  useRequestedChat(openChatBookingId, bookings, loading, view.revealBooking, onChatHandled);
 
   if (loading) {
     return (

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { IonButton, IonCheckbox, IonIcon } from '@ionic/react';
 import { calendarOutline, cashOutline, chatbubbleOutline, chatbubblesOutline, constructOutline } from 'ionicons/icons';
 import { STATUS_META, type BookingListItem } from '../lib/useBookingsList';
@@ -30,12 +30,19 @@ const BookingCard: React.FC<Props> = ({
   const [chatOpen, setChatOpen] = useState(false);
   const canChat = b.status !== 'cancelado';
 
+  // El callback se lee por ref: si el padre pasa una arrow nueva en cada render, el efecto de abajo
+  // no se vuelve a disparar (reabriria el chat si el usuario lo cerró antes de que se limpie el pedido).
+  const onChatOpenedRef = useRef(onChatOpened);
   useEffect(() => {
-    if (forceOpenChat && canChat) {
-      setChatOpen(true);
-      onChatOpened?.();
-    }
-  }, [forceOpenChat, canChat, onChatOpened]);
+    onChatOpenedRef.current = onChatOpened;
+  });
+
+  useEffect(() => {
+    if (!forceOpenChat) return;
+    if (canChat) setChatOpen(true);
+    // Se limpia el pedido aunque no se pueda abrir (reserva cancelada): si no, queda pegado.
+    onChatOpenedRef.current?.();
+  }, [forceOpenChat, canChat]);
 
   return (
   <div className="app-card booking-item">
