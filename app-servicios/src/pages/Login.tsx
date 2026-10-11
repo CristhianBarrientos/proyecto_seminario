@@ -8,7 +8,7 @@ import {
   hammerOutline, mailOutline, lockClosedOutline, personOutline, briefcaseOutline,
   eyeOutline, eyeOffOutline,
 } from 'ionicons/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
 import { clearIdleLogoutFlag, peekIdleLogoutFlag } from '../lib/idleSession';
@@ -17,11 +17,17 @@ import './Login.css';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  // La landing enlaza a /login?modo=registro[&rol=profesional] para abrir directo el alta.
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<'login' | 'signup'>(
+    searchParams.get('modo') === 'registro' ? 'signup' : 'login',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<'cliente' | 'profesional'>('cliente');
+  const [role, setRole] = useState<'cliente' | 'profesional'>(
+    searchParams.get('rol') === 'profesional' ? 'profesional' : 'cliente',
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [touched, setTouched] = useState(false);
