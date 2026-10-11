@@ -1,11 +1,11 @@
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonSpinner } from '@ionic/react';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonSpinner, IonButton, IonText } from '@ionic/react';
 import { useAuth } from '../contexts/AuthContext';
 import ClientBookings from '../components/ClientBookings';
 import ProfessionalBookings from '../components/ProfessionalBookings';
 import NotificationsList from '../components/NotificationsList';
 
 const Bookings: React.FC = () => {
-  const { user, role } = useAuth();
+  const { user, role, roleError, retryRole } = useAuth();
 
   return (
     <IonPage>
@@ -16,7 +16,12 @@ const Bookings: React.FC = () => {
       </IonHeader>
       <IonContent>
         <NotificationsList />
-        {!user || !role ? (
+        {user && !role && roleError ? (
+          <div className="ion-text-center ion-padding">
+            <IonText color="danger"><p>No pudimos cargar tu perfil. Revisá tu conexión e intentá de nuevo.</p></IonText>
+            <IonButton onClick={retryRole}>Reintentar</IonButton>
+          </div>
+        ) : !user || !role ? (
           <div className="ion-text-center ion-padding">
             <IonSpinner />
           </div>
