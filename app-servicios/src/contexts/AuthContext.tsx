@@ -8,6 +8,10 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   role: Role | null;
+  // true = no se pudo leer el rol de profiles tras los reintentos automáticos (red, RLS, sin fila).
+  // Las pantallas que gatean su render en `role` deben mostrar un error con reintento, no un spinner.
+  roleError: boolean;
+  retryRole: () => void;
   // null = todavía no se sabe (cargando o no aplica); false = es profesional
   // pero nunca completó "Editar perfil profesional" (sin fila en professional_profiles).
   hasProfessionalProfile: boolean | null;
@@ -19,14 +23,21 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   role: null,
+  roleError: false,
+  retryRole: () => {},
   hasProfessionalProfile: null,
   loading: true,
   signOut: async () => {},
 });
 
+const ROLE_FETCH_ATTEMPTS = 3;
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<Role | null>(null);
+  const [roleError, setRoleError] = useState(false);
+  // Se incrementa para volver a correr el fetch del rol (botón "Reintentar").
+  const [roleAttempt, setRoleAttempt] = useState(0);
   const [hasProfessionalProfile, setHasProfessionalProfile] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -72,23 +83,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const userId = session?.user?.id;
     if (!userId) {
       setRole(null);
+      setRoleError(false);
       return;
     }
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Al cambiar de usuario (A -> B sin pasar por null) no se debe seguir exponiendo el rol de A.
+    setRole(null);
+    setRoleError(false);
 
-    supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single()
-      .then(({ data }) => {
-        if (!cancelled) setRole(data?.role ?? null);
-      });
+    // Reintenta con backoff (0 s, 1 s, 2 s) SOLO errores transitorios (red, 5xx): un hiccup no
+    // debería dejar las pantallas gateadas por rol sin salida hasta recargar. Si el perfil no
+    // existe (PGRST116) o no tiene rol, reintentar no arregla nada: falla de inmediato.
+    const fetchRole = async () => {
+      for (let attempt = 0; attempt < ROLE_FETCH_ATTEMPTS; attempt++) {
+        if (attempt > 0) {
+          await new Promise<void>((resolve) => { timer = setTimeout(resolve, attempt * 1000); });
+        }
+        if (cancelled) return;
+        let retryable = true;
+        try {
+          const { data, error } = await supabase.from('profiles').select('role').eq('id', userId).single();
+          if (cancelled) return;
+          if (!error && data?.role) {
+            setRole(data.role);
+            return;
+          }
+          retryable = !!error && error.code !== 'PGRST116';
+          console.error(`[Auth] No se pudo leer el rol (intento ${attempt + 1}/${ROLE_FETCH_ATTEMPTS}):`, error ?? 'sin rol');
+        } catch (err) {
+          if (cancelled) return;
+          console.error(`[Auth] Error leyendo el rol (intento ${attempt + 1}/${ROLE_FETCH_ATTEMPTS}):`, err);
+        }
+        if (!retryable) break;
+      }
+      if (!cancelled) setRoleError(true);
+    };
+    fetchRole();
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, roleAttempt]);
 
   useEffect(() => {
     const userId = session?.user?.id;
@@ -103,8 +140,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .select('profile_id')
       .eq('profile_id', userId)
       .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setHasProfessionalProfile(!!data);
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        // Ante un error NO se asume "sin perfil": eso redirigiría a un profesional que sí lo tiene
+        // a "completá tu perfil". Se queda en null (= todavía no se sabe).
+        if (error) {
+          console.error('[Auth] No se pudo leer professional_profiles:', error);
+          return;
+        }
+        setHasProfessionalProfile(!!data);
       });
 
     return () => {
@@ -112,13 +156,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [session?.user?.id, role]);
 
+  const retryRole = () => setRoleAttempt((n) => n + 1);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, role, hasProfessionalProfile, loading, signOut }}
+      value={{
+        session, user: session?.user ?? null, role, roleError, retryRole, hasProfessionalProfile, loading, signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>
