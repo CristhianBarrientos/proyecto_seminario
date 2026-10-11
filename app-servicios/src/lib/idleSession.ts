@@ -70,13 +70,23 @@ export function flagIdleLogout(): void {
   }
 }
 
-/** Lee y borra la marca: el aviso se muestra una sola vez. */
-export function consumeIdleLogoutFlag(): boolean {
+/**
+ * Lee la marca SIN borrarla: se usa en un inicializador de estado, que React puede ejecutar más de
+ * una vez (StrictMode) y debe ser puro. El borrado va aparte, en un efecto (clearIdleLogoutFlag).
+ */
+export function peekIdleLogoutFlag(): boolean {
   try {
-    const flagged = window.sessionStorage.getItem(EXPIRED_NOTICE_KEY) === '1';
-    if (flagged) window.sessionStorage.removeItem(EXPIRED_NOTICE_KEY);
-    return flagged;
+    return window.sessionStorage.getItem(EXPIRED_NOTICE_KEY) === '1';
   } catch {
     return false;
+  }
+}
+
+/** Borra la marca: tras mostrar el aviso (una sola vez) o si el cierre por inactividad falló. */
+export function clearIdleLogoutFlag(): void {
+  try {
+    window.sessionStorage.removeItem(EXPIRED_NOTICE_KEY);
+  } catch {
+    /* nada que limpiar */
   }
 }

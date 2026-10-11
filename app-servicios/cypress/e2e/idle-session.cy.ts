@@ -45,6 +45,22 @@ describe('Cierre de sesión por inactividad', () => {
     cy.location('pathname').should('eq', '/tabs/home');
   });
 
+  it('una sesión persistida con marca vieja se cierra al reabrir (no recibe otra media hora)', () => {
+    // Regresión: durante la carga inicial `session` es null y el guard borraba la marca de
+    // actividad, regalándole 30 min más a una sesión abandonada hace horas.
+    // Simula "cerrar el navegador y reabrirlo horas después": la sesión de supabase sigue en
+    // localStorage y la marca vieja se escribe en la pagina NUEVA, antes de que arranque la app.
+    // (Escribirla en la pagina viva y recargar no sirve: su propio guard la ve vieja y cierra la
+    // sesión antes del reload, sin ejercitar la ruta de arranque.)
+    cy.visit('/tabs/home', {
+      onBeforeLoad(win) {
+        win.localStorage.setItem('session:lastActivity', String(Date.now() - 2 * 60 * MIN));
+      },
+    });
+    cy.location('pathname', { timeout: 10000 }).should('eq', '/login');
+    cy.contains('Tu sesión se cerró por inactividad').should('be.visible');
+  });
+
   it('el aviso de cierre solo aparece una vez en Login', () => {
     cy.tick(31 * MIN);
     cy.location('pathname', { timeout: 10000 }).should('eq', '/login');
