@@ -151,8 +151,9 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
   }, [userId]);
 
   // Para marcar una sola notificación al tocarla en el popup (p. ej. abrir el chat de esa
-  // reserva), sin esperar a que el usuario marque todas. Idempotente: si ya estaba leída,
-  // el UPDATE no afecta filas y no hace falta tocar el estado local.
+  // reserva), sin esperar a que el usuario marque todas. Idempotente: el UPDATE filtra
+  // read_at IS NULL, así que si ya estaba leída (p. ej. en otra pestaña) no afecta filas y no da
+  // error; en ese caso igual se refleja como leída en el estado local.
   const markRead = useCallback(async (id: string) => {
     if (!userId) return;
     const now = new Date().toISOString();
