@@ -113,5 +113,20 @@ export function useBookingsList(userId: string, ownField: OwnField) {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
   });
 
-  return { bookings, loading, error, pendingIds, updateStatus };
+  // Eliminación lógica por usuario (sql_docker/feature-hide-bookings.sql): la reserva sigue
+  // existiendo para la otra parte. La DB solo acepta reservas propias canceladas/completadas.
+  const hideBookings = async (ids: string[]): Promise<boolean> => {
+    if (ids.length === 0) return true;
+    const { error } = await supabase.rpc('hide_bookings', { booking_ids: ids });
+    if (error) {
+      setError(getFriendlyErrorMessage(error));
+      return false;
+    }
+    setError('');
+    const hidden = new Set(ids);
+    setBookings((prev) => prev.filter((b) => !hidden.has(b.id)));
+    return true;
+  };
+
+  return { bookings, loading, error, pendingIds, updateStatus, hideBookings };
 }

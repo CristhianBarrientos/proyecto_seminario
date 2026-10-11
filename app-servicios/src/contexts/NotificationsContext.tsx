@@ -24,12 +24,14 @@ interface NotificationsContextType {
   notifications: AppNotification[];
   unreadCount: number;
   markAllRead: () => Promise<void>;
+  markRead: (id: string) => Promise<void>;
 }
 
 const NotificationsContext = createContext<NotificationsContextType>({
   notifications: [],
   unreadCount: 0,
   markAllRead: async () => {},
+  markRead: async () => {},
 });
 
 /**
@@ -148,9 +150,28 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
     setNotifications((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: now })));
   }, [userId]);
 
+  // Para marcar una sola notificación al tocarla en el popup (p. ej. abrir el chat de esa
+  // reserva), sin esperar a que el usuario marque todas. Idempotente: si ya estaba leída,
+  // el UPDATE no afecta filas y no hace falta tocar el estado local.
+  const markRead = useCallback(async (id: string) => {
+    if (!userId) return;
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read_at: now })
+      .eq('id', id)
+      .is('read_at', null);
+
+    if (error) {
+      console.error('[Notifications] no se pudo marcar como leída:', error);
+      return;
+    }
+    setNotifications((prev) => prev.map((n) => (n.id === id && !n.read_at ? { ...n, read_at: now } : n)));
+  }, [userId]);
+
   const value = useMemo(
-    () => ({ notifications, unreadCount: notifications.filter((n) => !n.read_at).length, markAllRead }),
-    [notifications, markAllRead],
+    () => ({ notifications, unreadCount: notifications.filter((n) => !n.read_at).length, markAllRead, markRead }),
+    [notifications, markAllRead, markRead],
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
