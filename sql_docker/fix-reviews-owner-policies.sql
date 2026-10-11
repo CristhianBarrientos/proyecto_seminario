@@ -15,15 +15,24 @@ returns trigger
 language plpgsql
 as $$
 begin
-  new.updated_at = now();
-  -- Campos inmutables tras la creación: no se puede reasignar una reseña
-  -- a otro booking/cliente/profesional ni cambiarle el rating a otro que
-  -- no pase por esta misma validación - solo se edita el texto y el rating
-  -- de la reseña propia.
+  -- Campos inmutables tras la creacion: no se puede reasignar una resena a otro
+  -- booking/cliente/profesional ni cambiarle la fecha de creacion; solo se edita el contenido
+  -- de la resena propia. Se congelan ANTES de comparar para que un intento de tocarlos (que se
+  -- revierte) no cuente como edicion.
   new.booking_id = old.booking_id;
   new.client_id = old.client_id;
   new.professional_id = old.professional_id;
   new.created_at = old.created_at;
+
+  -- "Editada" = cambio el contenido. Se compara la FILA completa salvo updated_at (no solo
+  -- rating/comment): si manana se agrega otra columna editable, tambien marca la edicion.
+  if (to_jsonb(new) - 'updated_at') is distinct from (to_jsonb(old) - 'updated_at') then
+    new.updated_at = now();
+  else
+    -- Sin cambio de contenido: se conserva el valor anterior, ignorando lo que haya mandado el
+    -- cliente (no puede adelantarlo, falsearlo ni borrarlo).
+    new.updated_at = old.updated_at;
+  end if;
   return new;
 end;
 $$;
