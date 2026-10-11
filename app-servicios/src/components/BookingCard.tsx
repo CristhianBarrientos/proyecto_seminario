@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { IonButton, IonCheckbox, IonIcon } from '@ionic/react';
 import { calendarOutline, cashOutline, chatbubbleOutline, chatbubblesOutline, constructOutline } from 'ionicons/icons';
 import { STATUS_META, type BookingListItem } from '../lib/useBookingsList';
@@ -13,11 +13,29 @@ interface Props {
   children?: ReactNode;
   /** Modo selección (ocultar solicitudes): muestra un checkbox en la tarjeta. */
   selection?: { selected: boolean; onToggle: () => void };
+  /**
+   * Punto rojo en el botón de Chat. Es solo un indicador de "hay algo nuevo" - no un conteo: la
+   * tabla notifications guarda una sola fila new_message sin leer por reserva (el trigger no crea
+   * otra mientras esa siga sin leer), así que no hay forma de saber cuántos mensajes son.
+   */
+  hasUnreadChat?: boolean;
+  /** Abre el chat de esta tarjeta desde afuera (p. ej. al tocar una notificación). */
+  forceOpenChat?: boolean;
+  onChatOpened?: () => void;
 }
 
-const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, partyExtra, children, selection }) => {
+const BookingCard: React.FC<Props> = ({
+  booking: b, partyLabel, partyExtra, children, selection, hasUnreadChat, forceOpenChat, onChatOpened,
+}) => {
   const [chatOpen, setChatOpen] = useState(false);
   const canChat = b.status !== 'cancelado';
+
+  useEffect(() => {
+    if (forceOpenChat && canChat) {
+      setChatOpen(true);
+      onChatOpened?.();
+    }
+  }, [forceOpenChat, canChat, onChatOpened]);
 
   return (
   <div className="app-card booking-item">
@@ -70,9 +88,10 @@ const BookingCard: React.FC<Props> = ({ booking: b, partyLabel, partyExtra, chil
       <div className="booking-item__actions">
         {children}
         {canChat && (
-          <IonButton fill="outline" color="tertiary" size="small" onClick={() => setChatOpen(true)}>
+          <IonButton fill="outline" color="tertiary" size="small" className="booking-item__chat-btn" onClick={() => setChatOpen(true)}>
             <IonIcon icon={chatbubblesOutline} slot="start" />
             Chat
+            {hasUnreadChat && <span className="booking-item__chat-dot" aria-label="Mensajes nuevos" />}
           </IonButton>
         )}
       </div>

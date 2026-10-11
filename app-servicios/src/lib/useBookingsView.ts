@@ -67,9 +67,17 @@ export function useBookingsView(
     }
   };
 
+  // Si una reserva existe pero el filtro actual la esconde (p. ej. se abre su chat desde el FAB
+  // de notificaciones y el filtro estaba en "Pendientes"), cambia a "Todas" para que la tarjeta
+  // sea alcanzable. No hace nada si ya es visible o si la reserva no está en la lista.
+  const revealBooking = (id: string) => {
+    if (filtered.some((b) => b.id === id)) return;
+    if (bookings.some((b) => b.id === id)) setFilter('todas');
+  };
+
   return {
     filter, setFilter, filtered, selectMode, toggleSelectMode,
     selected: new Set(selectedIds), toggle, hideableCount: hideableIds.length,
-    allSelected, toggleAll, hideSelected, hiding,
+    allSelected, toggleAll, hideSelected, hiding, revealBooking,
   };
 }

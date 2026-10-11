@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { IonIcon, IonText, IonSpinner, IonButton } from '@ionic/react';
 import {
   hourglassOutline, closeCircleOutline, thumbsUpOutline, playOutline, checkmarkDoneOutline,
@@ -5,6 +6,7 @@ import {
 import { useBookingsList } from '../lib/useBookingsList';
 import { useClientReviews } from '../lib/useClientReviews';
 import { useBookingsView, isHideable } from '../lib/useBookingsView';
+import { useNotifications } from '../contexts/NotificationsContext';
 import BookingCard from './BookingCard';
 import BookingsToolbar from './BookingsToolbar';
 import RateClientForm from './RateClientForm';
@@ -13,12 +15,27 @@ import './Bookings.css';
 
 interface Props {
   userId: string;
+  /** Reserva cuyo chat hay que abrir (viene del FAB de notificaciones en Bookings.tsx). */
+  openChatBookingId?: string | null;
+  onChatHandled?: () => void;
 }
 
-const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
+const ProfessionalBookings: React.FC<Props> = ({ userId, openChatBookingId, onChatHandled }) => {
   const { bookings, loading, error, pendingIds, updateStatus, hideBookings } = useBookingsList(userId, 'professional_id');
   const view = useBookingsView(bookings, hideBookings);
   const { reviewedByBooking, ratingByClient, loaded: reviewsLoaded, error: reviewError, submitReview } = useClientReviews(userId, bookings);
+  const { notifications } = useNotifications();
+
+  // Punto rojo en el botón de Chat: hay una notificación new_message sin leer de esa reserva.
+  const unreadChatIds = new Set(
+    notifications.filter((n) => n.type === 'new_message' && !n.read_at && n.booking_id).map((n) => n.booking_id as string),
+  );
+
+  // Si el filtro actual esconde la reserva pedida desde el FAB, mostrarla primero.
+  useEffect(() => {
+    if (openChatBookingId) view.revealBooking(openChatBookingId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openChatBookingId]);
 
   if (loading) {
     return (
@@ -72,6 +89,9 @@ const ProfessionalBookings: React.FC<Props> = ({ userId }) => {
           selection={view.selectMode && isHideable(b)
             ? { selected: view.selected.has(b.id), onToggle: () => view.toggle(b.id) }
             : undefined}
+          hasUnreadChat={unreadChatIds.has(b.id)}
+          forceOpenChat={openChatBookingId === b.id}
+          onChatOpened={onChatHandled}
           partyExtra={clientRating && (
             <span className="booking-item__rating" title={`${clientRating.count} calificaciones`}>
               {' '}★ {clientRating.avg.toFixed(1)} ({clientRating.count})
