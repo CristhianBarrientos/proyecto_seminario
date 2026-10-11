@@ -9,7 +9,27 @@
 -- Reemplazo: función RPC server-side con ST_DWithin que devuelve
 -- distancia (km) en vez de coordenadas crudas, y la vista pública deja
 -- de exponer location.
+--
+-- IMPORTANTE (#31): la RPC nearby_professionals YA NO VIVE EN ESTE ARCHIVO. La version original
+-- (distancia exacta + EXECUTE a anon + sin tope = trilateracion) se retiro de aqui para que volver a
+-- correr este script (p. ej. para reparar la vista) no reinstale la vulnerabilidad. La funcion se
+-- define en fix-nearby-professionals-enmascarado.sql, que la crea si no existe: en un entorno nuevo
+-- se aplican los dos, este primero.
+--
+-- #32: todo el script va en UNA transaccion. Antes eran sentencias DDL sueltas: si en un runner que
+-- autocommitea cada sentencia fallaba el CREATE VIEW o un GRANT despues de que el DROP VIEW ya se
+-- habia commiteado, la vista quedaba inexistente y Home.tsx/ProfessionalDetail (que hacen SELECT
+-- sobre professional_profiles_public) fallaban hasta volver a correr el fix a mano. Con
+-- BEGIN/COMMIT, si algo falla se revierte todo y la vista queda como estaba.
+-- Verificado con `psql` normal: un GRANT que falla revierte tambien el DROP VIEW (la vista queda con
+-- el mismo hash de definicion y los mismos permisos). Con `psql --single-transaction` el BEGIN/COMMIT
+-- internos solo emiten warnings. NO se probo en el SQL Editor de Supabase Studio ni en otros runners
+-- que envien sentencia por sentencia: ahi la transaccion podria no abarcar el script.
+-- DROP VIEW toma un lock ACCESS EXCLUSIVE que se mantiene hasta el COMMIT; es breve (DDL de una
+-- vista), pero las lecturas de la vista esperan mientras dura.
 -- ============================================================
+
+begin;
 
 -- ------------------------------------------------------------
 -- 1. Vista pública sin location.
@@ -29,50 +49,7 @@ from public.professional_profiles;
 grant select on public.professional_profiles_public to authenticated, anon;
 
 -- ------------------------------------------------------------
--- 2. RPC de distancia. security definer porque professional_profiles
---    tiene RLS restrictivo (solo el dueño lee su fila completa); esta
---    función controla exactamente qué se expone a terceros: distancia
---    calculada, nunca location en sí.
---    search_path fijo para evitar hijacking vía search_path del rol
---    que invoca la función (recomendación estándar para SECURITY DEFINER).
+-- 2. (retirada) La RPC de distancia se movio a fix-nearby-professionals-enmascarado.sql (#31).
 -- ------------------------------------------------------------
-create or replace function public.nearby_professionals(
-  lat double precision,
-  lng double precision,
-  radius_km double precision default 10
-)
-returns table (
-  profile_id uuid,
-  bio text,
-  service_radius_km numeric,
-  is_verified boolean,
-  created_at timestamptz,
-  distance_km double precision
-)
-language sql
-stable
-security definer
-set search_path = public, pg_catalog
-as $$
-  select
-    pp.profile_id,
-    pp.bio,
-    pp.service_radius_km,
-    pp.is_verified,
-    pp.created_at,
-    ST_Distance(
-      pp.location,
-      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
-    ) / 1000.0 as distance_km
-  from public.professional_profiles pp
-  where pp.location is not null
-    and ST_DWithin(
-      pp.location,
-      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
-      radius_km * 1000
-    )
-  order by distance_km asc;
-$$;
 
-grant execute on function public.nearby_professionals(double precision, double precision, double precision)
-  to authenticated, anon;
+commit;

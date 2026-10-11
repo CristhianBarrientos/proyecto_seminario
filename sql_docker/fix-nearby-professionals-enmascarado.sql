@@ -1,6 +1,10 @@
 -- ============================================================
 -- FIX #31: nearby_professionals() permitia trilateracion
 --
+-- ORDEN: aplicar DESPUES de fix-nearby-professionals-rpc.sql. Ojo: por nombre este archivo ordena
+-- ANTES (e < r), asi que un replay "en orden alfabetico" desharia este arreglo y dejaria la RPC
+-- vulnerable. Respetar el orden historico, o volver a aplicar este archivo al final.
+--
 -- Problema (fix-nearby-professionals-rpc.sql): la RPC devolvia distance_km con precision completa
 -- calculada desde un punto que manda el propio caller, con EXECUTE para anon y sin tope de radio ni
 -- LIMIT. Tres llamadas desde tres puntos cercanos resuelven la ubicacion exacta del profesional
@@ -17,22 +21,39 @@
 --
 -- Ademas:
 --   * Se revoca EXECUTE a anon y PUBLIC; queda solo authenticated (y se exige auth.uid()).
---   * radius_km se acota a [0, 50] y se devuelven como maximo 50 filas.
+--   * radius_km se acota a [0, 50] y se devuelven como maximo 50 filas. OJO: el LIMIT trunca sin
+--     avisar y no hay paginacion; en zonas densas solo se ven los 50 mas cercanos. Para un futuro
+--     feed/mapa "cerca de mi" habra que agregar paginacion o una consulta por zona.
 --   * Se validan lat/lng.
---   * Limite de 30 llamadas por minuto por usuario (ventana fija de 1 minuto). Frena el scripteo
---     desde UNA cuenta; no sustituye al #5: con signup abierto y autoconfirm se pueden crear
---     cuentas nuevas, pero el enmascarado ya acota lo que cada cuenta puede aprender.
+--   * Limite de 30 llamadas por minuto por usuario, con VENTANA FIJA de 1 minuto: en el borde de un
+--     minuto cabe una rafaga de hasta 60 llamadas. Al exceder se responde HTTP 429 (PT429); PostgREST
+--     no propaga un Retry-After desde el detail del error en esta version, asi que el cliente debe
+--     esperar ~1 minuto.
+--   * El radio se prefiltra con la columna indexada (GiST professional_location_idx), ensanchado 1 km
+--     por el desplazamiento maximo del ajuste a la cuadricula (~0.79 km), y despues se aplica el
+--     filtro real sobre el punto enmascarado. El prefiltro solo acota candidatos: el resultado
+--     depende unicamente del punto ajustado.
+--
+-- LIMITES CONOCIDOS (no se cierran aqui):
+--   * El limite es por cuenta; con signup abierto y autoconfirm se pueden crear cuentas nuevas y
+--     multiplicar el cupo. Eso lo cierra el #5 (captcha / limite de registros); el enmascarado ya
+--     acota lo que cada cuenta puede aprender.
+--   * La cuadricula es fija y global: una trilateracion perfecta devuelve el nodo de la cuadricula
+--     (en zonas rurales una celda puede ser un solo hogar) y, si un profesional cambia su ubicacion,
+--     el nodo "salta", lo que revela que se movio. Un desplazamiento por perfil (jitter salado) o
+--     una cuadricula mas gruesa en zonas poco densas lo mitigaria.
 --
 -- Misma firma y mismas columnas que antes (distance_km ahora es la distancia al punto enmascarado,
--- redondeada a 0.1 km), asi que no rompe a nadie. El front no la usa hoy. Al escribir el contador
--- la funcion pasa de STABLE a VOLATILE: supabase.rpc usa POST, que es lo que PostgREST exige para
--- funciones volatiles.
+-- redondeada a 0.1 km). El front nunca la llamo en ninguna version, asi que no rompe a nadie, pero
+-- quien la use en el futuro debe contar con el tope de 50 filas. Al escribir el contador la funcion
+-- pasa de STABLE a VOLATILE: supabase.rpc usa POST, que es lo que PostgREST exige para funciones
+-- volatiles.
 --
 -- Idempotente: se puede aplicar mas de una vez.
 -- ============================================================
 
 -- Contadores del limite. Sin acceso directo para anon/authenticated (RLS sin politicas + revoke):
--- solo la funcion (security definer, dueña de la tabla) los toca.
+-- solo la funcion (security definer) los toca.
 create table if not exists public.rpc_rate_limit (
   user_id uuid not null references auth.users(id) on delete cascade,
   fn text not null,
@@ -40,6 +61,9 @@ create table if not exists public.rpc_rate_limit (
   calls integer not null default 0,
   primary key (user_id, fn, window_start)
 );
+
+-- La limpieza borra por window_start, que no es la primera columna de la PK.
+create index if not exists rpc_rate_limit_window_idx on public.rpc_rate_limit (window_start);
 
 alter table public.rpc_rate_limit enable row level security;
 revoke all on public.rpc_rate_limit from anon, authenticated;
@@ -78,14 +102,15 @@ begin
 
   -- Limite por usuario. El INSERT ... ON CONFLICT es atomico por fila, asi que dos llamadas
   -- concurrentes no se saltan el tope. Si se excede, el RAISE revierte el incremento: el contador
-  -- se queda en el maximo y las siguientes del mismo minuto siguen rechazadas.
+  -- se queda en el maximo y las siguientes del mismo minuto siguen rechazadas. PT429 hace que
+  -- PostgREST responda HTTP 429 (con 54000 respondia 500 y no se distinguia de un fallo del server).
   insert into public.rpc_rate_limit as r (user_id, fn, window_start, calls)
   values (uid, 'nearby_professionals', date_trunc('minute', now()), 1)
   on conflict (user_id, fn, window_start) do update set calls = r.calls + 1
   returning r.calls into window_calls;
 
   if window_calls > max_calls_per_minute then
-    raise exception 'Demasiadas consultas, intenta de nuevo en un minuto' using errcode = '54000';
+    raise sqlstate 'PT429' using message = 'Demasiadas consultas, intenta de nuevo en un minuto';
   end if;
 
   -- Limpieza oportunista: solo cuando se abre una ventana nueva para este usuario.
@@ -114,12 +139,20 @@ begin
       ST_SnapToGrid(pp.location::geometry, 0.01)::geography as masked_location
     from public.professional_profiles pp
     where pp.location is not null
+      -- prefiltro con el indice GiST; solo acota candidatos (ver cabecera)
+      and ST_DWithin(pp.location, caller_point, capped_radius_km * 1000 + 1000)
   ) m
   where ST_DWithin(m.masked_location, caller_point, capped_radius_km * 1000)
   order by ST_Distance(m.masked_location, caller_point) asc, m.profile_id
   limit 50;
 end;
 $$;
+
+-- security definer escribe en una tabla con RLS sin politicas: solo funciona si funcion y tabla
+-- tienen el mismo dueño (o BYPASSRLS). CREATE OR REPLACE conserva el dueño anterior y CREATE TABLE
+-- IF NOT EXISTS deja como dueño a quien corre el script, asi que se fija explicitamente.
+alter table public.rpc_rate_limit owner to postgres;
+alter function public.nearby_professionals(double precision, double precision, double precision) owner to postgres;
 
 -- Los permisos de una funcion se heredan al reemplazarla: se fijan explicitamente.
 revoke all on function public.nearby_professionals(double precision, double precision, double precision)
