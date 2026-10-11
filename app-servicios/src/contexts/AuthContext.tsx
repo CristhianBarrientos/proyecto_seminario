@@ -87,14 +87,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Al cambiar de usuario (A -> B sin pasar por null) no se debe seguir exponiendo el rol de A.
+    setRole(null);
     setRoleError(false);
 
-    // Reintenta con backoff (0 s, 1 s, 2 s) antes de rendirse: un hiccup de red no debería dejar
-    // las pantallas gateadas por rol sin salida hasta recargar la página.
+    // Reintenta con backoff (0 s, 1 s, 2 s) SOLO errores transitorios (red, 5xx): un hiccup no
+    // debería dejar las pantallas gateadas por rol sin salida hasta recargar. Si el perfil no
+    // existe (PGRST116) o no tiene rol, reintentar no arregla nada: falla de inmediato.
     const fetchRole = async () => {
       for (let attempt = 0; attempt < ROLE_FETCH_ATTEMPTS; attempt++) {
-        if (attempt > 0) await new Promise((r) => setTimeout(r, attempt * 1000));
+        if (attempt > 0) {
+          await new Promise<void>((resolve) => { timer = setTimeout(resolve, attempt * 1000); });
+        }
         if (cancelled) return;
+        let retryable = true;
         try {
           const { data, error } = await supabase.from('profiles').select('role').eq('id', userId).single();
           if (cancelled) return;
@@ -102,21 +109,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setRole(data.role);
             return;
           }
-          console.error(`[Auth] No se pudo leer el rol (intento ${attempt + 1}/${ROLE_FETCH_ATTEMPTS}):`, error ?? 'sin fila');
+          retryable = !!error && error.code !== 'PGRST116';
+          console.error(`[Auth] No se pudo leer el rol (intento ${attempt + 1}/${ROLE_FETCH_ATTEMPTS}):`, error ?? 'sin rol');
         } catch (err) {
           if (cancelled) return;
           console.error(`[Auth] Error leyendo el rol (intento ${attempt + 1}/${ROLE_FETCH_ATTEMPTS}):`, err);
         }
+        if (!retryable) break;
       }
-      if (!cancelled) {
-        setRole(null);
-        setRoleError(true);
-      }
+      if (!cancelled) setRoleError(true);
     };
     fetchRole();
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [session?.user?.id, roleAttempt]);
 
@@ -133,8 +140,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .select('profile_id')
       .eq('profile_id', userId)
       .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setHasProfessionalProfile(!!data);
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        // Ante un error NO se asume "sin perfil": eso redirigiría a un profesional que sí lo tiene
+        // a "completá tu perfil". Se queda en null (= todavía no se sabe).
+        if (error) {
+          console.error('[Auth] No se pudo leer professional_profiles:', error);
+          return;
+        }
+        setHasProfessionalProfile(!!data);
       });
 
     return () => {

@@ -18,7 +18,7 @@ const Bookings: React.FC = () => {
         <NotificationsList />
         {user && !role && roleError ? (
           <div className="ion-text-center ion-padding">
-            <IonText color="danger"><p>No pudimos cargar tu perfil. Revisá tu conexión e intentá de nuevo.</p></IonText>
+            <IonText color="danger"><p>No pudimos cargar tu perfil. Intentá de nuevo; si sigue fallando, cerrá sesión y volvé a ingresar.</p></IonText>
             <IonButton onClick={retryRole}>Reintentar</IonButton>
           </div>
         ) : !user || !role ? (
