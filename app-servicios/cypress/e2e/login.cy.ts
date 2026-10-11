@@ -20,11 +20,7 @@ describe('Login', () => {
   });
 
   it('loguea con credenciales válidas y redirige al feed', () => {
-    cy.get('input[type="email"]').type(email);
-    cy.get('input[type="password"]').type(password);
-    cy.contains('ion-button', 'Entrar').click();
-
-    cy.location('pathname', { timeout: 10000 }).should('eq', '/tabs/home');
+    cy.login(email, password);
     cy.contains('Servicios cerca de ti').should('be.visible');
   });
 });
