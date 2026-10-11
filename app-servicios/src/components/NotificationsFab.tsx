@@ -43,7 +43,7 @@ const NotificationsFab: React.FC<Props> = ({ onOpenChat }) => {
             size="small"
             color="light"
             onClick={(e) => setPopoverEvent(e.nativeEvent)}
-            aria-label={`Notificaciones (${unreadCount} sin leer)`}
+            aria-label={unreadCount > 0 ? `Notificaciones (${unreadCount} sin leer)` : 'Notificaciones'}
           >
             <IonIcon icon={notificationsOutline} />
           </IonFabButton>
