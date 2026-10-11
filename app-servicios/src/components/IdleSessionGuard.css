@@ -1,0 +1,31 @@
+/* Aviso de cierre por inactividad: pequeño, no bloquea la pantalla (no es modal) y sube desde abajo. */
+.idle-warning {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--ion-safe-area-bottom, 0px) + 72px); /* por encima de la tab bar */
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(92vw, 420px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--ion-color-dark, #222);
+  color: var(--ion-color-dark-contrast, #fff);
+  font-size: 0.85rem;
+  line-height: 1.3;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  animation: idle-warning-in 0.35s ease-out both;
+}
+
+.idle-warning ion-icon { flex: none; font-size: 1.2rem; color: var(--ion-color-warning); }
+
+@keyframes idle-warning-in {
+  from { opacity: 0; transform: translate(-50%, 24px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idle-warning { animation: none; }
+}
