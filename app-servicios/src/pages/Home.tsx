@@ -8,7 +8,7 @@ import { shieldCheckmarkOutline, hammerOutline, funnelOutline, cashOutline, sear
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
-import { feedServiceRowSchema, parseRowsOrDrop } from '../lib/supabaseSchemas';
+import { feedServiceRowSchema, parseRowsReporting, droppedRowsNotice } from '../lib/supabaseSchemas';
 import { useAuth } from '../contexts/AuthContext';
 import ProfessionalDashboard from '../components/ProfessionalDashboard';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
@@ -44,6 +44,7 @@ const Home: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [droppedWarning, setDroppedWarning] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +66,7 @@ const Home: React.FC = () => {
         return;
       }
 
-      const rows = parseRowsOrDrop(feedServiceRowSchema, servicesResult.data ?? [], 'Home.feed_services');
+      const { rows, dropped } = parseRowsReporting(feedServiceRowSchema, servicesResult.data ?? [], 'Home.feed_services');
 
       const merged: ServiceFeedItem[] = rows.map((r) => ({
         id: r.id,
@@ -83,6 +84,9 @@ const Home: React.FC = () => {
       }));
 
       if (!cancelled) {
+        const notice = droppedRowsNotice(dropped, rows.length);
+        setError(notice.error);
+        setDroppedWarning(notice.warning);
         setServices(merged);
         setCategories(categoriesResult.data ?? []);
         setLoading(false);
@@ -166,6 +170,12 @@ const Home: React.FC = () => {
         {error && (
           <IonText color="danger">
             <p className="ion-padding">{error}</p>
+          </IonText>
+        )}
+
+        {droppedWarning && (
+          <IonText color="warning">
+            <p className="ion-padding">{droppedWarning}</p>
           </IonText>
         )}
 

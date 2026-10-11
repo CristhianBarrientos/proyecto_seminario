@@ -12,16 +12,6 @@ import { z } from 'zod';
 
 const categoryRefSchema = z.object({ name: z.string() }).nullable();
 
-export const rawServiceRowSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  price: z.number(),
-  price_unit: z.string(),
-  category_id: z.number(),
-  professional_id: z.string(),
-  categories: categoryRefSchema,
-});
-
 // Fila plana de la RPC feed_services() (sql_docker/perf-feed-services-rpc.sql): servicios activos
 // ya unidos con categoría, nombre del profesional y verificación en un solo round-trip.
 export const feedServiceRowSchema = z.object({
@@ -36,8 +26,6 @@ export const feedServiceRowSchema = z.object({
   is_verified: z.boolean(),
 });
 
-export const rawServiceRowListSchema = z.array(rawServiceRowSchema);
-export type RawServiceRow = z.infer<typeof rawServiceRowSchema>;
 
 export const serviceItemSchema = z.object({
   id: z.string(),
@@ -47,7 +35,6 @@ export const serviceItemSchema = z.object({
   categories: categoryRefSchema,
 });
 
-export const serviceItemListSchema = z.array(serviceItemSchema);
 export type ServiceItem = z.infer<typeof serviceItemSchema>;
 
 const bookingServiceRefSchema = z.object({ title: z.string(), price_unit: z.string() }).nullable();
@@ -94,17 +81,42 @@ export type BookingStatus = BookingRow['status'];
 /**
  * Valida un array de filas crudas de Supabase contra `schema`. Si una fila
  * no matchea, se descarta y se loguea en consola (no se rompe el feed
- * completo por una fila inesperada) - devuelve solo las filas válidas.
+ * completo por una fila inesperada). Devuelve las filas válidas y cuántas se
+ * descartaron, para que la pantalla pueda avisar en vez de mostrar un estado
+ * vacío que parezca "no hay datos" cuando en realidad cambió el shape del backend.
  */
-export function parseRowsOrDrop<T>(schema: z.ZodType<T>, rows: unknown[], context: string): T[] {
+export function parseRowsReporting<T>(
+  schema: z.ZodType<T>,
+  rows: unknown[],
+  context: string,
+): { rows: T[]; dropped: number } {
   const result: T[] = [];
+  let dropped = 0;
   for (const row of rows) {
     const parsed = schema.safeParse(row);
     if (parsed.success) {
       result.push(parsed.data);
     } else {
+      dropped++;
       console.error(`[${context}] fila con shape inesperado, descartada`, row, parsed.error.issues);
     }
   }
-  return result;
+  return { rows: result, dropped };
+}
+
+/** Igual que parseRowsReporting pero devuelve solo las filas válidas (para quien no necesita el conteo). */
+export function parseRowsOrDrop<T>(schema: z.ZodType<T>, rows: unknown[], context: string): T[] {
+  return parseRowsReporting(schema, rows, context).rows;
+}
+
+/**
+ * Aviso visible cuando parseRowsReporting descartó filas. Si se descartó TODO (kept === 0) es un
+ * error: la pantalla tiene que mostrarlo como tal y no como "no hay datos". Si fue parcial es solo
+ * un aviso (warning) que no debe tapar el contenido ni el estado vacío. Ambos '' si no se descartó nada.
+ */
+export function droppedRowsNotice(dropped: number, kept: number): { error: string; warning: string } {
+  if (dropped === 0) return { error: '', warning: '' };
+  return kept === 0
+    ? { error: 'No pudimos mostrar el contenido. Intentá de nuevo más tarde.', warning: '' }
+    : { error: '', warning: 'Algunos elementos no se pudieron mostrar.' };
 }

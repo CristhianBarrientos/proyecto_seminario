@@ -10,7 +10,7 @@ import {
 } from 'ionicons/icons';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
-import { serviceItemSchema, parseRowsOrDrop, type ServiceItem } from '../lib/supabaseSchemas';
+import { serviceItemSchema, parseRowsReporting, droppedRowsNotice, type ServiceItem } from '../lib/supabaseSchemas';
 import { useAuth } from '../contexts/AuthContext';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import './ProfessionalDetail.css';
@@ -36,6 +36,7 @@ const ProfessionalDetail: React.FC = () => {
   const [rating, setRating] = useState<RatingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [droppedWarning, setDroppedWarning] = useState('');
   const [requestingId, setRequestingId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -88,7 +89,17 @@ const ProfessionalDetail: React.FC = () => {
             }
           : null,
       );
-      setServices(parseRowsOrDrop(serviceItemSchema, servicesResult.data ?? [], 'ProfessionalDetail.services'));
+      if (servicesResult.error) {
+        setError(getFriendlyErrorMessage(servicesResult.error));
+        setServices([]);
+        setDroppedWarning('');
+      } else {
+        const { rows: serviceRows, dropped } = parseRowsReporting(serviceItemSchema, servicesResult.data ?? [], 'ProfessionalDetail.services');
+        const notice = droppedRowsNotice(dropped, serviceRows.length);
+        setServices(serviceRows);
+        setError(notice.error);
+        setDroppedWarning(notice.warning);
+      }
       setRating(ratingResult.data as RatingData | null);
       setLoading(false);
     };
@@ -160,6 +171,7 @@ const ProfessionalDetail: React.FC = () => {
         )}
 
         {error && <IonText color="danger"><p className="ion-padding">{error}</p></IonText>}
+        {droppedWarning && <IonText color="warning"><p className="ion-padding">{droppedWarning}</p></IonText>}
 
         {!loading && professional && (
           <>
