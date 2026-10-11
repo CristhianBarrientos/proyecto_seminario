@@ -8,7 +8,7 @@ import { shieldCheckmarkOutline, hammerOutline, funnelOutline, cashOutline, sear
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
-import { feedServiceRowSchema, parseRowsOrDrop } from '../lib/supabaseSchemas';
+import { feedServiceRowSchema, parseRowsReporting, droppedRowsMessage } from '../lib/supabaseSchemas';
 import { useAuth } from '../contexts/AuthContext';
 import ProfessionalDashboard from '../components/ProfessionalDashboard';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
@@ -65,7 +65,7 @@ const Home: React.FC = () => {
         return;
       }
 
-      const rows = parseRowsOrDrop(feedServiceRowSchema, servicesResult.data ?? [], 'Home.feed_services');
+      const { rows, dropped } = parseRowsReporting(feedServiceRowSchema, servicesResult.data ?? [], 'Home.feed_services');
 
       const merged: ServiceFeedItem[] = rows.map((r) => ({
         id: r.id,
@@ -83,6 +83,7 @@ const Home: React.FC = () => {
       }));
 
       if (!cancelled) {
+        setError(droppedRowsMessage(dropped, rows.length, 'servicios') ?? '');
         setServices(merged);
         setCategories(categoriesResult.data ?? []);
         setLoading(false);

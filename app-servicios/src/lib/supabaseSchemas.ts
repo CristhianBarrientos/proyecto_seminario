@@ -36,7 +36,6 @@ export const feedServiceRowSchema = z.object({
   is_verified: z.boolean(),
 });
 
-export const rawServiceRowListSchema = z.array(rawServiceRowSchema);
 export type RawServiceRow = z.infer<typeof rawServiceRowSchema>;
 
 export const serviceItemSchema = z.object({
@@ -47,7 +46,6 @@ export const serviceItemSchema = z.object({
   categories: categoryRefSchema,
 });
 
-export const serviceItemListSchema = z.array(serviceItemSchema);
 export type ServiceItem = z.infer<typeof serviceItemSchema>;
 
 const bookingServiceRefSchema = z.object({ title: z.string(), price_unit: z.string() }).nullable();
@@ -94,17 +92,41 @@ export type BookingStatus = BookingRow['status'];
 /**
  * Valida un array de filas crudas de Supabase contra `schema`. Si una fila
  * no matchea, se descarta y se loguea en consola (no se rompe el feed
- * completo por una fila inesperada) - devuelve solo las filas válidas.
+ * completo por una fila inesperada). Devuelve las filas válidas y cuántas se
+ * descartaron, para que la pantalla pueda avisar en vez de mostrar un estado
+ * vacío que parezca "no hay datos" cuando en realidad cambió el shape del backend.
  */
-export function parseRowsOrDrop<T>(schema: z.ZodType<T>, rows: unknown[], context: string): T[] {
+export function parseRowsReporting<T>(
+  schema: z.ZodType<T>,
+  rows: unknown[],
+  context: string,
+): { rows: T[]; dropped: number } {
   const result: T[] = [];
+  let dropped = 0;
   for (const row of rows) {
     const parsed = schema.safeParse(row);
     if (parsed.success) {
       result.push(parsed.data);
     } else {
+      dropped++;
       console.error(`[${context}] fila con shape inesperado, descartada`, row, parsed.error.issues);
     }
   }
-  return result;
+  return { rows: result, dropped };
+}
+
+/** Igual que parseRowsReporting pero devuelve solo las filas válidas (para quien no necesita el conteo). */
+export function parseRowsOrDrop<T>(schema: z.ZodType<T>, rows: unknown[], context: string): T[] {
+  return parseRowsReporting(schema, rows, context).rows;
+}
+
+/**
+ * Mensaje visible cuando parseRowsReporting descartó filas: distingue "no se pudo mostrar nada"
+ * (todas descartadas) de "faltan algunos". null si no se descartó ninguna.
+ */
+export function droppedRowsMessage(dropped: number, kept: number, noun: string): string | null {
+  if (dropped === 0) return null;
+  return kept === 0
+    ? `No pudimos mostrar ${noun}. Intentá de nuevo más tarde.`
+    : `Algunos ${noun} no se pudieron mostrar.`;
 }
