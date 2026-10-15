@@ -29,6 +29,8 @@ para compilar, firmar y publicar una versión. Se hace **desde Windows**, con Po
 ## Qué verificar antes de publicar
 
 - Instalarlo en un celular real: `adb install -r dist-apk\yaquedo.apk`, iniciar sesión y recorrer los flujos.
+  El release está minimizado con R8 y los plugins de Capacitor usan reflexión: **después de agregar cualquier
+  plugin nativo** (push, geolocalización...) esta prueba en dispositivo es obligatoria. Reglas en `android/app/proguard-rules.pro`.
 - `sha256sum`/`Get-FileHash` del archivo publicado debe coincidir con el de la landing.
 
 ## Notas

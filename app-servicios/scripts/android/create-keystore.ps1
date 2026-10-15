@@ -22,10 +22,16 @@ if (Test-Path $ks) {
     throw "Ya existe $ks. No se sobrescribe: reemplazar la llave impide actualizar la app instalada."
 }
 
-$javaHome = $env:JAVA_HOME
-if (-not $javaHome) { $javaHome = 'C:\Program Files\Android\Android Studio\jbr' }
-$keytool = Join-Path $javaHome 'bin\keytool.exe'
-if (-not (Test-Path $keytool)) { throw "No encuentro keytool en $keytool. Define JAVA_HOME (JDK 21 o el JBR de Android Studio)." }
+# El JBR de Android Studio NO incluye keytool; se busca en JAVA_HOME, en el JDK instalado y en el PATH.
+$candidatos = @()
+if ($env:JAVA_HOME) { $candidatos += (Join-Path $env:JAVA_HOME 'bin\keytool.exe') }
+$candidatos += Get-ChildItem 'C:\Program Files\Java\jdk*\bin\keytool.exe' -ErrorAction SilentlyContinue |
+    Sort-Object FullName -Descending | ForEach-Object FullName
+$candidatos += 'C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe'
+$enPath = Get-Command keytool.exe -ErrorAction SilentlyContinue
+if ($enPath) { $candidatos += $enPath.Source }
+$keytool = $candidatos | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+if (-not $keytool) { throw 'No encuentro keytool.exe. Instala un JDK 21 o define JAVA_HOME apuntando a uno (el JBR de Android Studio no lo trae).' }
 
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 

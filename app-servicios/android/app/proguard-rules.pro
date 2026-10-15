@@ -1,21 +1,15 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# Reglas de R8 del release (minifyEnabled + shrinkResources).
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Capacitor descubre sus plugins por REFLEXION (anotaciones @CapacitorPlugin / @PluginMethod). Sin reglas, R8 puede
+# eliminar esos metodos y un release pierde funciones, o crashea, mientras el APK de depuracion (sin minimizar)
+# funciona. Son las reglas recomendadas por la documentacion de Capacitor.
+#
+# SIEMPRE probar el release en un dispositivo despues de agregar un plugin nativo (push, geolocalizacion, ...).
+-keep class com.getcapacitor.** { *; }
+-keep public class * extends com.getcapacitor.Plugin { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin public class * {
+    @com.getcapacitor.annotation.PermissionCallback <methods>;
+    @com.getcapacitor.annotation.ActivityCallback <methods>;
+    @com.getcapacitor.PluginMethod public <methods>;
+}
+-keepattributes *Annotation*,InnerClasses,Signature,EnclosingMethod
