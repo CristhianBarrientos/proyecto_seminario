@@ -1,9 +1,10 @@
+import { lazy } from 'react';
 import { Navigate, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Capacitor } from '@capacitor/core';
 import Login from './pages/Login';
-import Landing from './pages/Landing';
+import LazyRoute from './components/LazyRoute';
 import Tabs from './Tabs';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -27,6 +28,9 @@ import '@ionic/react/css/palettes/dark.class.css';
 
 import './theme/variables.css';
 import './theme/global.css';
+
+// La landing es solo web: lazy para que su codigo y su CSS no entren al bundle inicial del APK nativo.
+const Landing = lazy(() => import('./pages/Landing'));
 
 setupIonicReact();
 
@@ -52,7 +56,7 @@ const AppRoutes: React.FC = () => {
           element={
             Capacitor.isNativePlatform()
               ? <Navigate to={session ? '/tabs/home' : '/login'} replace />
-              : <Landing />
+              : <LazyRoute asPage><Landing /></LazyRoute>
           }
         />
       </IonRouterOutlet>

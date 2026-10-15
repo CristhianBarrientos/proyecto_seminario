@@ -7,11 +7,36 @@
  */
 export const APP_NAME = 'Ya Quedó';
 
-export const APK_RELEASE = {
+export interface ApkRelease {
+  url: string;
+  releasesPage: string;
+  version: string | null;
+  sizeMb: number | null;
+  sha256: string | null;
+}
+
+/** La descarga solo se ofrece con version Y SHA-256: no se publica un binario externo sin checksum. */
+export function isApkAvailable(release: Pick<ApkRelease, 'version' | 'sha256'>): boolean {
+  return release.version !== null && release.sha256 !== null;
+}
+
+/**
+ * Combinacion inconsistente: se publico `version` pero falta `sha256`. La landing sigue diciendo
+ * "disponible pronto" aunque el APK exista, asi que se avisa en consola en vez de fallar en silencio.
+ */
+export function apkReleaseProblem(release: Pick<ApkRelease, 'version' | 'sha256'>): string | null {
+  if (release.version !== null && release.sha256 === null) {
+    return 'APK_RELEASE tiene `version` pero no `sha256`: la landing no ofrece la descarga hasta completarlo.';
+  }
+  return null;
+}
+
+export const APK_RELEASE: ApkRelease = {
   url: 'https://github.com/CristhianBarrientos/proyecto_seminario/releases/latest/download/yaquedo.apk',
   releasesPage: 'https://github.com/CristhianBarrientos/proyecto_seminario/releases/latest',
-  // null mientras no exista un APK publicado: la landing muestra "próximamente".
-  version: null as string | null,
-  sizeMb: null as number | null,
-  sha256: null as string | null,
+  // null mientras no exista un APK publicado: la landing muestra "próximamente". La descarga solo se
+  // ofrece cuando hay `version` Y `sha256` (no se publica un binario sin checksum).
+  version: null,
+  sizeMb: null,
+  sha256: null,
 };
