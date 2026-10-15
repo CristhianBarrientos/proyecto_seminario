@@ -10,7 +10,8 @@ export const APP_NAME = 'Ya Quedó';
 export const APK_RELEASE = {
   url: 'https://github.com/CristhianBarrientos/proyecto_seminario/releases/latest/download/yaquedo.apk',
   releasesPage: 'https://github.com/CristhianBarrientos/proyecto_seminario/releases/latest',
-  // null mientras no exista un APK publicado: la landing muestra "próximamente".
+  // null mientras no exista un APK publicado: la landing muestra "próximamente". La descarga solo se
+  // ofrece cuando hay `version` Y `sha256` (no se publica un binario sin checksum).
   version: null as string | null,
   sizeMb: null as number | null,
   sha256: null as string | null,

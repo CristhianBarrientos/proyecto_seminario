@@ -41,6 +41,17 @@ const Login: React.FC = () => {
     clearIdleLogoutFlag();
   }, []);
 
+  // Ionic mantiene Login montado en su pila de navegacion: los useState iniciales de arriba solo corren
+  // la primera vez. Si ya se habia abierto /login y despues se llega desde la landing con
+  // ?modo=registro&rol=profesional, el formulario seguia en "iniciar sesion" como cliente. Se sincroniza
+  // con la URL cada vez que cambian esos parametros (sin parametros = inicio de sesion como cliente).
+  const modoParam = searchParams.get('modo');
+  const rolParam = searchParams.get('rol');
+  useEffect(() => {
+    setMode(modoParam === 'registro' ? 'signup' : 'login');
+    setRole(rolParam === 'profesional' ? 'profesional' : 'cliente');
+  }, [modoParam, rolParam]);
+
   const emailInvalid = touched && !isValidEmail(email);
   const passwordInvalid = touched && password.trim().length < MIN_PASSWORD_LENGTH;
   const fullNameInvalid = touched && mode === 'signup' && !isValidFullName(fullName);

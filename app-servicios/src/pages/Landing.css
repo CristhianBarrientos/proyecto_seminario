@@ -310,3 +310,10 @@
     transition: none;
   }
 }
+
+/* Las anclas (#como-funciona, #profesionales, #descargar) dejaban el titulo de la seccion tapado por la
+   barra sticky: se reserva su altura al hacer scroll hasta ellas. */
+.landing-hero,
+.landing-section {
+  scroll-margin-top: 72px;
+}

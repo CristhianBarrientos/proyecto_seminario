@@ -11,8 +11,9 @@ import './Landing.css';
 // la landing las puede listar sin sesión. Si falla la carga, se usa la lista fija.
 const categoryRowsSchema = z.array(z.object({ id: z.number(), name: z.string() }));
 
+// Mismos nombres que la tabla `categories` (si la carga falla, la lista fija no debe contradecir a la base).
 const FALLBACK_CATEGORIES = [
-  'Electricidad', 'Plomería', 'Albañilería', 'Carpintería', 'Pintura',
+  'Albañilería', 'Carpintería', 'Electricista', 'Pintura', 'Plomería',
 ];
 
 const STEPS = [
@@ -47,20 +48,35 @@ const Landing: React.FC = () => {
       .from('categories')
       .select('id, name')
       .order('name')
-      .then(({ data, error }) => {
-        if (cancelled || error) return;
-        const parsed = categoryRowsSchema.safeParse(data);
-        if (parsed.success && parsed.data.length > 0) {
-          setCategories(parsed.data.map((c) => c.name));
-        }
-      });
+      .then(
+        ({ data, error }) => {
+          if (cancelled) return;
+          if (error) {
+            console.error('[Landing] no se pudieron cargar los oficios, se usa la lista fija:', error);
+            return;
+          }
+          const parsed = categoryRowsSchema.safeParse(data);
+          if (parsed.success && parsed.data.length > 0) {
+            setCategories(parsed.data.map((c) => c.name));
+          } else if (!parsed.success) {
+            console.error('[Landing] los oficios no tienen la forma esperada, se usa la lista fija:', parsed.error.issues);
+          }
+        },
+        (err) => {
+          if (!cancelled) console.error('[Landing] fallo de red al cargar los oficios, se usa la lista fija:', err);
+        },
+      );
     return () => {
       cancelled = true;
     };
   }, []);
 
   const { version, sizeMb, sha256 } = APK_RELEASE;
-  const apkAvailable = version !== null;
+  // Solo se ofrece el APK con version Y SHA-256: la pagina pide instalar un binario de un origen externo,
+  // asi que no se publica sin checksum para verificarlo.
+  const apkAvailable = version !== null && sha256 !== null;
+  // Con sesion, todos los accesos llevan al feed (la ruta /login ya redirige ahi, pero se evita el salto).
+  const appPath = session ? '/tabs/home' : '/login';
 
   return (
     <IonPage>
@@ -72,7 +88,7 @@ const Landing: React.FC = () => {
             <a href="#profesionales">Profesionales</a>
             <a href="#descargar">Android</a>
           </nav>
-          <Link className="landing-btn landing-btn--small" to={session ? '/tabs/home' : '/login'}>
+          <Link className="landing-btn landing-btn--small" to={appPath}>
             {session ? 'Ir a mi cuenta' : 'Ingresar'}
           </Link>
         </header>
@@ -86,8 +102,8 @@ const Landing: React.FC = () => {
               Compará perfiles, solicitá el servicio y calificá el trabajo, todo en un solo lugar.
             </p>
             <div className="landing-hero__cta">
-              <Link className="landing-btn" to="/login">
-                Usar en la web
+              <Link className="landing-btn" to={appPath}>
+                {session ? 'Ir a mi cuenta' : 'Usar en la web'}
               </Link>
               <a className="landing-btn landing-btn--ghost" href="#descargar">
                 Descargar para Android
@@ -141,15 +157,13 @@ const Landing: React.FC = () => {
                     Descargar APK{sizeMb ? ` (${sizeMb} MB)` : ''}
                   </a>
                   <p className="landing-meta">Versión {version}</p>
-                  {sha256 && (
-                    <p className="landing-meta">
-                      SHA-256: <code>{sha256}</code>
-                    </p>
-                  )}
+                  <p className="landing-meta">
+                    SHA-256: <code>{sha256}</code>
+                  </p>
                 </>
               ) : (
                 <>
-                  <span className="landing-btn landing-btn--disabled" aria-disabled="true">
+                  <span className="landing-btn landing-btn--disabled" role="button" aria-disabled="true">
                     Descarga disponible pronto
                   </span>
                   <p className="landing-meta">Mientras tanto, podés usar la versión web.</p>
@@ -166,7 +180,7 @@ const Landing: React.FC = () => {
 
         <footer className="landing-footer">
           <span>© {new Date().getFullYear()} {APP_NAME}</span>
-          <Link to="/login">Ingresar</Link>
+          <Link to={appPath}>{session ? 'Ir a mi cuenta' : 'Ingresar'}</Link>
         </footer>
       </IonContent>
     </IonPage>
