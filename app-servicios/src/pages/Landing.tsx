@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { APP_NAME, APK_RELEASE } from '../lib/appRelease';
+import { APP_NAME, APK_RELEASE, apkReleaseProblem, isApkAvailable } from '../lib/appRelease';
 import './Landing.css';
 
 // `categories` tiene lectura pública (policy categories_select_public), así que
@@ -72,9 +72,11 @@ const Landing: React.FC = () => {
   }, []);
 
   const { version, sizeMb, sha256 } = APK_RELEASE;
-  // Solo se ofrece el APK con version Y SHA-256: la pagina pide instalar un binario de un origen externo,
-  // asi que no se publica sin checksum para verificarlo.
-  const apkAvailable = version !== null && sha256 !== null;
+  const apkAvailable = isApkAvailable(APK_RELEASE);
+  useEffect(() => {
+    const problem = apkReleaseProblem(APK_RELEASE);
+    if (problem) console.warn('[Landing]', problem);
+  }, []);
   // Con sesion, todos los accesos llevan al feed (la ruta /login ya redirige ahi, pero se evita el salto).
   const appPath = session ? '/tabs/home' : '/login';
 
@@ -163,9 +165,9 @@ const Landing: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <span className="landing-btn landing-btn--disabled" role="button" aria-disabled="true">
+                  <button type="button" className="landing-btn landing-btn--disabled" disabled>
                     Descarga disponible pronto
-                  </span>
+                  </button>
                   <p className="landing-meta">Mientras tanto, podés usar la versión web.</p>
                 </>
               )}

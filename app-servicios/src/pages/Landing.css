@@ -1,4 +1,6 @@
 .landing-content {
+  /* Altura de la barra sticky: la usan la barra y el margen de las anclas, para que no se desincronicen. */
+  --landing-nav-h: 64px;
   --background: var(--ion-background-color);
   scroll-behavior: smooth;
 }
@@ -15,7 +17,9 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 20px;
+  height: var(--landing-nav-h);
+  box-sizing: border-box;
+  padding: 0 20px;
   background: var(--ion-toolbar-background);
   border-bottom: 1px solid var(--ion-border-color);
 }
@@ -52,6 +56,7 @@
   border-radius: var(--app-radius-sm);
   background: var(--ion-color-secondary);
   color: var(--ion-color-secondary-contrast);
+  font-family: inherit;
   font-weight: 700;
   font-size: 1rem;
   border: 2px solid transparent;
@@ -315,5 +320,5 @@
    barra sticky: se reserva su altura al hacer scroll hasta ellas. */
 .landing-hero,
 .landing-section {
-  scroll-margin-top: 72px;
+  scroll-margin-top: calc(var(--landing-nav-h) + 8px);
 }

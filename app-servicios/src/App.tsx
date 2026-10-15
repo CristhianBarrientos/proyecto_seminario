@@ -56,7 +56,7 @@ const AppRoutes: React.FC = () => {
           element={
             Capacitor.isNativePlatform()
               ? <Navigate to={session ? '/tabs/home' : '/login'} replace />
-              : <LazyRoute><Landing /></LazyRoute>
+              : <LazyRoute asPage><Landing /></LazyRoute>
           }
         />
       </IonRouterOutlet>

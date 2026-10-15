@@ -69,11 +69,30 @@ describe('Landing', () => {
       });
     });
 
+    it('si el usuario cambió el formulario a mano, el mismo enlace de la landing lo vuelve a dejar en el alta', () => {
+      // Los parametros de la URL quedan identicos entre la primera y la segunda vez, asi que no basta con
+      // reaccionar a un cambio de URL: hay que reiniciar el formulario cada vez que Login vuelve a ser activo.
+      cy.contains('a.landing-btn', 'Crear mi perfil profesional').click({ scrollBehavior: 'center' });
+      cy.contains('ion-button', 'Registrarme').should('exist');
+      cy.contains('ion-segment-button', 'Iniciar sesión').click(); // pasa a login a mano; la URL no cambia
+      cy.contains('ion-button', 'Entrar').should('exist');
+
+      cy.go('back');
+      cy.location('pathname').should('eq', '/');
+      cy.contains('a.landing-btn', 'Crear mi perfil profesional').click({ scrollBehavior: 'center' });
+      cy.contains('ion-button', 'Registrarme').should('exist');
+      cy.get('ion-select').first().should(($el) => {
+        expect(($el[0] as unknown as { value: string }).value).to.eq('profesional');
+      });
+    });
+
     it('los enlaces de la barra dejan el título de la sección visible, no tapado por la barra sticky', () => {
       for (const [texto, id] of [['Cómo funciona', 'como-funciona'], ['Profesionales', 'profesionales'], ['Android', 'descargar']]) {
         cy.contains('.landing-nav__links a', texto).click();
-        cy.wait(700); // scroll suave
-        cy.window().then((win) => {
+        // `should` con callback reintenta hasta que termina el scroll suave (sin esperas fijas). Nav y
+        // seccion se miden respecto del mismo viewport, asi que la comparacion es valida aunque el scroll
+        // ocurra dentro de ion-content.
+        cy.window().should((win) => {
           const nav = win.document.querySelector('.landing-nav')!.getBoundingClientRect();
           const section = win.document.getElementById(id)!.getBoundingClientRect();
           expect(section.top, `la sección #${id} no debe quedar bajo la barra`).to.be.at.least(nav.bottom - 1);
