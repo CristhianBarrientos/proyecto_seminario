@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ya Quedó</string>
+    <string name="title_activity_main">Ya Quedó</string>
+    <string name="package_name">umg.yaquedo.app</string>
+    <string name="custom_url_scheme">umg.yaquedo.app</string>
+</resources>
