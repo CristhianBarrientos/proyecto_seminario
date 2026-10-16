@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Ningun codigo del proyecto usa el FileProvider hoy. La plantilla exponia TODO el almacenamiento externo
+         y todo el cache; se acota a una subcarpeta. Si una fase futura necesita compartir archivos, agregar
+         aqui solo la ruta concreta que haga falta. -->
+    <cache-path name="shared" path="shared/" />
+</paths>

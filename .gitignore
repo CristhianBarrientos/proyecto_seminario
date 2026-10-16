@@ -6,6 +6,7 @@ node_modules/
 # credentials
 .env
 .env.*
+!.env.production.example
 
 # testing
 coverage/
@@ -28,3 +29,22 @@ build/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# android (proyecto nativo de Capacitor): se versiona el codigo, no lo generado ni lo local ni los secretos
+app-servicios/android/.gradle/
+app-servicios/android/build/
+app-servicios/android/app/build/
+app-servicios/android/app/src/main/assets/public/
+app-servicios/android/app/src/main/assets/capacitor.config.json
+app-servicios/android/app/src/main/assets/capacitor.plugins.json
+app-servicios/android/capacitor-cordova-android-plugins/
+app-servicios/android/local.properties
+app-servicios/android/.idea/
+# llaves de firma y binarios: NUNCA al repo
+*.keystore
+*.jks
+keystore.properties
+*.apk
+*.aab
+
+app-servicios/dist-apk/
