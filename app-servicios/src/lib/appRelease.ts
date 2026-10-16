@@ -34,9 +34,8 @@ export function apkReleaseProblem(release: Pick<ApkRelease, 'version' | 'sha256'
 export const APK_RELEASE: ApkRelease = {
   url: 'https://github.com/CristhianBarrientos/proyecto_seminario/releases/latest/download/yaquedo.apk',
   releasesPage: 'https://github.com/CristhianBarrientos/proyecto_seminario/releases/latest',
-  // null mientras no exista un APK publicado: la landing muestra "próximamente". La descarga solo se
-  // ofrece cuando hay `version` Y `sha256` (no se publica un binario sin checksum).
-  version: null,
-  sizeMb: null,
-  sha256: null,
+  // Release v1.0.0 publicado. La descarga solo se ofrece con `version` Y `sha256` (no se publica un binario sin checksum).
+  version: '1.0.0',
+  sizeMb: 1.4,
+  sha256: '28fb1014421d5868a3966e0f3662639227e6b1a3c0f9a58ccf5ff45c16352dbd',
 };
