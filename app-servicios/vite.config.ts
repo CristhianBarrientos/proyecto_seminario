@@ -11,9 +11,9 @@ export default defineConfig({
     legacy()
   ],
   server: {
-    // permite acceder al dev server vía túneles temporales (Cloudflare Tunnel)
+    // hosts con los que se accede al dev server: el dominio público (detrás de Cloudflare) y túneles temporales
     // para compartirlo con el equipo - no afecta al backend, que sigue siendo OCI
-    allowedHosts: ['.trycloudflare.com'],
+    allowedHosts: ['app.yaquedo.shop', '.trycloudflare.com'],
   },
   test: {
     globals: true,
