@@ -13,6 +13,7 @@ import { getFriendlyErrorMessage } from '../lib/errorMessages';
 import { serviceItemSchema, parseRowsReporting, droppedRowsNotice, type ServiceItem } from '../lib/supabaseSchemas';
 import { useAuth } from '../contexts/AuthContext';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
+import ProfessionalReviews from '../components/ProfessionalReviews';
 import './ProfessionalDetail.css';
 
 interface ProfessionalData {
@@ -284,6 +285,12 @@ const ProfessionalDetail: React.FC = () => {
                 </div>
               )}
             </div>
+
+            <p className="app-section-label">
+              <IonIcon icon={star} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+              Reseñas
+            </p>
+            <ProfessionalReviews professionalId={id} emptyText="Todavía no tiene reseñas. Las dejan los clientes al completar un trabajo." />
           </>
         )}
       </IonContent>
