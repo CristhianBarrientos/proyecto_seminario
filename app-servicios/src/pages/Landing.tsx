@@ -9,7 +9,10 @@ import { APP_NAME, APK_RELEASE, apkReleaseProblem, isApkAvailable } from '../lib
 import './Landing.css';
 
 // Palabras del titular: cada una entra con su retraso (ver .landing-word en el CSS). `necesitás` va resaltada.
-const HEADLINE = ['El', 'profesional', 'que', 'necesitás,', 'a', 'un', 'mensaje', 'de', 'distancia.'];
+const HEADLINE: { text: string; hl?: boolean }[] = [
+  { text: 'El' }, { text: 'profesional' }, { text: 'que' }, { text: 'necesitás,', hl: true }, { text: 'a' },
+  { text: 'un' }, { text: 'mensaje' }, { text: 'de' }, { text: 'distancia.' },
+];
 
 // Muestra decorativa para la maqueta del teléfono del hero (no son datos de la base).
 const PHONE_ROWS = [
@@ -23,6 +26,25 @@ const PHONE_ROWS = [
 // resaltado (p. ej. el primero de la base, Albañilería) contradiría la lista. Son fijos a propósito, no
 // vienen de `categories`: la maqueta debe verse igual haya o no carga de la base.
 const PHONE_CHIPS = ['Todos', ...PHONE_ROWS.slice(0, 3).map((row) => row.trade)];
+
+// El hero tiene varias animaciones infinitas (gradiente, luces difusas, telefono): fuera de pantalla se pausan
+// con data-offscreen (ver el CSS) para no repintar capas grandes sin que nadie las vea.
+function usePauseHeroOffscreen() {
+  useEffect(() => {
+    const hero = document.querySelector<HTMLElement>('.landing-hero');
+    if (!hero || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) hero.removeAttribute('data-offscreen');
+      else hero.setAttribute('data-offscreen', '');
+    });
+    io.observe(hero);
+    return () => io.disconnect();
+  }, []);
+}
+
+// Tiempo en que una transicion de revelado termina (0.8 s + holgura) y escalon maximo por hijo (ver .landing-steps).
+const REVEAL_SETTLE_MS = 1700;
+const REVEAL_STAGGER_MS = 110;
 
 // Revela con una animacion los bloques marcados con `data-reveal` cuando entran en pantalla. Al terminar se
 // les quita la marca para que su hover/transform propio no quede pisado. Sin IntersectionObserver o con
@@ -45,11 +67,14 @@ function useReveal() {
           const el = entry.target as HTMLElement;
           io.unobserve(el);
           el.classList.add('is-in');
+          // Base + el retraso del ultimo hijo (el CSS escalona --i * 70..110 ms): con muchas categorias, un tiempo fijo
+          // retiraria la marca a mitad de la transicion y los ultimos elementos saltarian.
+          const settleMs = REVEAL_SETTLE_MS + Math.max(0, el.children.length - 1) * REVEAL_STAGGER_MS;
           timers.push(
             window.setTimeout(() => {
               el.removeAttribute('data-reveal');
               el.classList.remove('is-in');
-            }, 1700),
+            }, settleMs),
           );
         }
       },
@@ -97,6 +122,7 @@ const INSTALL_STEPS = [
 const Landing: React.FC = () => {
   const { session } = useAuth();
   useReveal();
+  usePauseHeroOffscreen();
   const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES);
 
   useEffect(() => {
@@ -160,11 +186,11 @@ const Landing: React.FC = () => {
               </div>
               <p className="landing-eyebrow landing-rise" style={{ '--d': 1 } as React.CSSProperties}>Oficios cerca de ti</p>
               <h1>
-                {HEADLINE.map((word, i) => (
+                {HEADLINE.map(({ text, hl }, i) => (
                   <Fragment key={i}>
                     <span className="landing-word">
-                      <span className={word === 'necesitás,' ? 'landing-word__hl' : undefined} style={{ '--i': i } as React.CSSProperties}>
-                        {word}
+                      <span className={hl ? 'landing-word__hl' : undefined} style={{ '--i': i } as React.CSSProperties}>
+                        {text}
                       </span>
                     </span>{' '}
                   </Fragment>
