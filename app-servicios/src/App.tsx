@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import IdleSessionGuard from './components/IdleSessionGuard';
+import PushRegistrar from './components/PushRegistrar';
 // Aviso de privacidad y terminos (texto publico, enlazado desde el pie de la landing). NO es lazy a proposito: una ruta
 // lazy de primer nivel con LazyRoute asPage deja la pagina real en `ion-page-invisible` cuando se NAVEGA a ella (la
 // transicion corre sobre la pagina del spinner). Es corta, asi que pesa muy poco en el bundle.
@@ -46,6 +47,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <IonReactRouter>
+      <PushRegistrar />
       <IonRouterOutlet>
         <Route
           path="/login"

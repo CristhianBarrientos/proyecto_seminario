@@ -100,6 +100,19 @@ try {
     Step 'Sincronizando con el proyecto Android (cap sync)'
     & npx cap sync android
     if ($LASTEXITCODE -ne 0) { Fail 'cap sync fallo.' }
+
+    # Push (FCM): el plugin google-services de Gradle solo se aplica si existe androidpp\google-services.json.
+    # Ese archivo NO va al repo (android\.gitignore): se toma de YAQUEDO_GOOGLE_SERVICES o de
+    # %USERPROFILE%\.yaquedo\google-services.json, y se valida que sea de esta app.
+    Step 'Configurando Firebase (push)'
+    $gs = $env:YAQUEDO_GOOGLE_SERVICES
+    if (-not $gs) { $gs = Join-Path $env:USERPROFILE '.yaquedo\google-services.json' }
+    if (-not (Test-Path $gs)) { Fail "Falta google-services.json ($gs). Descargalo de Firebase (proyecto yaquedoapp > app Android) o define YAQUEDO_GOOGLE_SERVICES." }
+    $gsJson = Get-Content $gs -Raw | ConvertFrom-Json
+    $gsPkgs = @($gsJson.client | ForEach-Object { $_.client_info.android_client_info.package_name })
+    if ($gsPkgs -notcontains 'umg.yaquedo.app') { Fail "google-services.json no es de umg.yaquedo.app (paquetes: $($gsPkgs -join ', ')). El push no llegaria." }
+    Copy-Item $gs (Join-Path $android 'app\google-services.json') -Force
+    Write-Host "  google-services.json ok (proyecto $($gsJson.project_info.project_id))"
 } finally {
     Pop-Location
     foreach ($v in $viteEnv) { Remove-Item "Env:$v" -ErrorAction SilentlyContinue }
