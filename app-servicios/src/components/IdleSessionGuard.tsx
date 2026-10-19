@@ -3,6 +3,7 @@ import { IonIcon } from '@ionic/react';
 import { timeOutline } from 'ionicons/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { resumePush, unregisterPush } from '../lib/pushNotifications';
 import {
   ACTIVITY_WRITE_THROTTLE_MS, clearIdleLogoutFlag, clearLastActivity, flagIdleLogout, idleState,
   readLastActivity, secondsUntilExpiry, writeLastActivity,
@@ -80,6 +81,8 @@ const IdleSessionGuard: React.FC = () => {
       // vuelva la promesa. Si el cierre falla se retira, para no avisar de algo que no pasó.
       flagIdleLogout();
       try {
+        // Quita el token de push mientras la sesión aún vale (mejor esfuerzo, nunca lanza).
+        await unregisterPush();
         const { error } = await supabase.auth.signOut({ scope: 'local' });
         if (error) throw error;
       } catch (err) {
@@ -88,6 +91,8 @@ const IdleSessionGuard: React.FC = () => {
         console.error('[IdleSession] no se pudo cerrar la sesión, se reintenta:', err);
         clearIdleLogoutFlag();
         signingOutRef.current = false;
+        // La sesión sigue activa: se reactiva el push que se quitó antes de intentar cerrar.
+        void resumePush();
       }
     };
 
