@@ -14,6 +14,7 @@ import { supabase } from './supabaseClient';
 /** Debe coincidir con ANDROID_CHANNEL_ID de la Edge Function send-push. */
 export const PUSH_CHANNEL_ID = 'yaquedo_default';
 
+const TOKEN_STORAGE_KEY = 'yaquedo.pushToken';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NOTIFICATION_TYPES = ['booking_requested', 'booking_status', 'new_message'] as const;
 
@@ -33,17 +34,54 @@ export function pushTargetPath(data: Record<string, unknown> | undefined): strin
   return '/tabs/bookings';
 }
 
-// Token del dispositivo vigente; se necesita para borrarlo al cerrar sesión.
-let currentToken: string | null = null;
-let listenersReady = false;
+// El token vigente se guarda también en localStorage: si la app se reinicia antes de que llegue el evento
+// 'registration' (o el RPC falla), unregisterPush todavía puede borrar la fila correcta al cerrar sesión.
+function readStoredToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredToken(token: string | null): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    else localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    /* sin almacenamiento: queda solo el de memoria */
+  }
+}
+
+let currentToken: string | null = readStoredToken();
+// Promesa (no booleano): dos llamadas simultáneas esperan la misma instalación y, si falla, se reintenta.
+let listenersReady: Promise<void> | null = null;
 
 async function saveToken(token: string): Promise<void> {
-  const { error } = await supabase.rpc('register_device_token', { p_token: token, p_platform: 'android' });
-  if (error) {
-    console.error('[Push] no se pudo registrar el token:', error);
-    return;
-  }
+  // Se recuerda ANTES del RPC: aunque falle, el token es de este dispositivo y hay que poder desasociarlo.
   currentToken = token;
+  writeStoredToken(token);
+  const { error } = await supabase.rpc('register_device_token', { p_token: token, p_platform: 'android' });
+  if (error) console.error('[Push] no se pudo registrar el token:', error);
+}
+
+function installListeners(onOpen: (path: string) => void): Promise<void> {
+  if (!listenersReady) {
+    listenersReady = (async () => {
+      await PushNotifications.addListener('registration', (t) => { void saveToken(t.value); });
+      await PushNotifications.addListener('registrationError', (e) => {
+        console.error('[Push] error de registro FCM:', e);
+      });
+      await PushNotifications.addListener('pushNotificationActionPerformed', (a: ActionPerformed) => {
+        const path = pushTargetPath(a.notification.data);
+        if (path) onOpen(path);
+      });
+    })().catch((err) => {
+      listenersReady = null;
+      throw err;
+    });
+  }
+  return listenersReady;
 }
 
 /**
@@ -54,17 +92,7 @@ export async function registerPush(onOpen: (path: string) => void): Promise<void
   if (!isPushSupported()) return;
 
   try {
-    if (!listenersReady) {
-      listenersReady = true;
-      await PushNotifications.addListener('registration', (t) => { void saveToken(t.value); });
-      await PushNotifications.addListener('registrationError', (e) => {
-        console.error('[Push] error de registro FCM:', e);
-      });
-      await PushNotifications.addListener('pushNotificationActionPerformed', (a: ActionPerformed) => {
-        const path = pushTargetPath(a.notification.data);
-        if (path) onOpen(path);
-      });
-    }
+    await installListeners(onOpen);
 
     await PushNotifications.createChannel({
       id: PUSH_CHANNEL_ID,
@@ -90,20 +118,38 @@ export async function registerPush(onOpen: (path: string) => void): Promise<void
 /**
  * Quita este dispositivo de la cuenta actual. Debe llamarse ANTES de cerrar la sesión (el DELETE necesita
  * auth.uid()): si no, el teléfono seguiría recibiendo los avisos (con texto de chats) de una cuenta ya cerrada.
- * Es de mejor esfuerzo: nunca bloquea ni hace fallar el cierre de sesión.
+ * Es de mejor esfuerzo: nunca lanza ni bloquea el cierre de sesión. Si el cierre de sesión después falla y el
+ * usuario sigue logueado, el llamador debe invocar resumePush().
  */
 export async function unregisterPush(): Promise<void> {
   if (!isPushSupported()) return;
-  const token = currentToken;
-  currentToken = null;
+  const token = currentToken ?? readStoredToken();
   try {
     if (token) {
       const { error } = await supabase.from('device_tokens').delete().eq('token', token);
       if (error) console.error('[Push] no se pudo borrar el token:', error);
+      else {
+        currentToken = null;
+        writeStoredToken(null);
+      }
     }
     // Invalida el token en FCM: aunque el DELETE fallara (sin red), el servidor lo descarta al primer envío.
     await PushNotifications.unregister();
   } catch (err) {
     console.error('[Push] no se pudo desregistrar:', err);
+  }
+}
+
+/**
+ * Reactiva el push tras un unregisterPush cuyo cierre de sesión NO ocurrió (p. ej. sin red): obtiene un token
+ * nuevo (el anterior se invalidó) y lo registra con la sesión que sigue vigente. No-op si no hay permiso.
+ */
+export async function resumePush(): Promise<void> {
+  if (!isPushSupported()) return;
+  try {
+    const perm = await PushNotifications.checkPermissions();
+    if (perm.receive === 'granted') await PushNotifications.register();
+  } catch (err) {
+    console.error('[Push] no se pudo reactivar:', err);
   }
 }

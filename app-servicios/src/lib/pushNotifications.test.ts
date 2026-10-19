@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('./supabaseClient', () => ({ supabase: {} }));
 vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: {} }));
 
-import { isPushSupported, pushTargetPath, registerPush, unregisterPush } from './pushNotifications';
+import { isPushSupported, pushTargetPath, registerPush, resumePush, unregisterPush } from './pushNotifications';
 
 const BOOKING = '8f0c1a52-6b7e-4d0a-9c1e-2f3a4b5c6d7e';
 
@@ -43,6 +43,7 @@ describe('en web (no nativo)', () => {
     const onOpen = vi.fn();
     await expect(registerPush(onOpen)).resolves.toBeUndefined();
     await expect(unregisterPush()).resolves.toBeUndefined();
+    await expect(resumePush()).resolves.toBeUndefined();
     expect(onOpen).not.toHaveBeenCalled();
   });
 });

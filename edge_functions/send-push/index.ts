@@ -130,10 +130,14 @@ Deno.serve(async (req: Request) => {
   const data: Record<string, string> = { type: notification.type, notification_id: notification.id }
   if (notification.booking_id) data.booking_id = notification.booking_id
 
-  let sent = 0
-  let failed = 0
-  let removed = 0
-  for (const token of tokens) {
+  // Un token solo se descarta cuando FCM dice que ESE token ya no sirve (UNREGISTERED: app desinstalada o datos
+  // borrados; o formato de token invalido). Un 404 a secas NO basta: tambien lo devuelve un project_id equivocado o
+  // la API deshabilitada, y borraria los tokens de todos los usuarios por un problema de configuracion.
+  const isDeadToken = (err: { error?: { status?: string; message?: string; details?: unknown } }) =>
+    JSON.stringify(err?.error?.details ?? []).includes('UNREGISTERED') ||
+    /not a valid FCM registration token/i.test(err?.error?.message ?? '')
+
+  const results = await Promise.all(tokens.map(async (token) => {
     const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -146,20 +150,20 @@ Deno.serve(async (req: Request) => {
         },
       }),
     })
-    if (res.ok) {
-      sent++
-      continue
-    }
-    failed++
+    if (res.ok) return { sent: 1, failed: 0, removed: 0 }
+
     const err = await res.json().catch(() => ({}))
-    const codes = JSON.stringify(err?.error?.details ?? [])
     console.error('send-push: FCM', res.status, err?.error?.status, err?.error?.message)
-    // UNREGISTERED = el token ya no existe (app desinstalada / datos borrados): se descarta.
-    if (res.status === 404 || codes.includes('UNREGISTERED')) {
+    let removed = 0
+    if (isDeadToken(err)) {
       const del = await rest(`device_tokens?token=eq.${encodeURIComponent(token)}`, { method: 'DELETE' })
-      if (del.ok) removed++
+      if (del.ok) removed = 1
     }
-  }
+    return { sent: 0, failed: 1, removed }
+  }))
+  const sent = results.reduce((n, r) => n + r.sent, 0)
+  const failed = results.reduce((n, r) => n + r.failed, 0)
+  const removed = results.reduce((n, r) => n + r.removed, 0)
 
   return json(200, { sent, failed, removed })
 })

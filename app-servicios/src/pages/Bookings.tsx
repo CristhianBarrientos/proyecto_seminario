@@ -19,7 +19,7 @@ const Bookings: React.FC = () => {
   useEffect(() => {
     if (!chatFromLink) return;
     setOpenChatBookingId(chatFromLink);
-    setSearchParams({}, { replace: true });
+    setSearchParams((prev) => { const next = new URLSearchParams(prev); next.delete('chat'); return next; }, { replace: true });
   }, [chatFromLink, setSearchParams]);
 
   return (

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
-import { unregisterPush } from '../lib/pushNotifications';
+import { resumePush, unregisterPush } from '../lib/pushNotifications';
 
 type Role = 'cliente' | 'profesional';
 
@@ -162,7 +162,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signOut = async () => {
     // Antes de cerrar: el DELETE del token de push necesita la sesión vigente.
     await unregisterPush();
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    // Si el cierre no se concretó (p. ej. sin red) la sesión sigue viva: se devuelve el push a este usuario.
+    if (error) void resumePush();
   };
 
   return (
