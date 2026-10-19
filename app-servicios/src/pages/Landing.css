@@ -784,20 +784,26 @@
 
 .landing-faq__item p {
   margin: 0;
-  padding: 0 22px 18px;
+  padding: 0 22px 14px;
   color: var(--ion-color-medium);
   line-height: 1.6;
 }
 
-.landing-faq__action {
-  margin: 0 22px 18px;
+/* Sin enlace ni boton, el parrafo cierra la tarjeta; con ellos, cierra el contenedor `__extra`. */
+.landing-faq__item > p:last-child,
+.landing-faq__extra {
+  padding-bottom: 18px;
+}
+
+.landing-faq__extra {
+  padding-left: 22px;
+  padding-right: 22px;
 }
 
 /* El ambar de marca no alcanza contraste como texto sobre fondo claro (2:1): el enlace va en el color de texto y el
    ambar queda en el subrayado. */
 .landing-faq__item a {
   display: inline-block;
-  margin: -6px 22px 18px;
   font-weight: 700;
   color: var(--ion-text-color);
   text-decoration: underline;

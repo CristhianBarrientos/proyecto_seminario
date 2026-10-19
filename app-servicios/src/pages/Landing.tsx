@@ -172,27 +172,27 @@ const INSTALL_GUIDE = [
   {
     title: 'Descargá el APK',
     text: 'Desde tu celular Android, tocá el botón de descarga. Si el navegador pregunta si querés conservar el archivo, aceptá.',
+    short: 'Descargá el archivo .apk desde tu celular Android.',
   },
   {
     title: 'Permití la instalación',
     text: 'Al abrir el archivo, Android avisa que no puede instalar apps desconocidas desde ese origen. Tocá "Configuración", activá "Permitir desde esta fuente" (solo afecta a tu navegador) y volvé atrás.',
+    short: 'Al abrirlo, Android pedirá permiso para instalar apps de este origen: aceptalo solo para tu navegador.',
   },
   {
     title: 'Confirmá la instalación',
     text: 'Tocá "Instalar". Si Play Protect avisa que la app no es de Play Store, tocá "Más detalles" y luego "Instalar de todos modos": es esperado, la distribuimos directamente.',
+    short: 'Confirmá la instalación. Si Play Protect avisa que la app no es de Play Store, es esperado: la distribuimos directamente.',
   },
   {
     title: 'Abrí Ya Quedó',
     text: 'Tocá "Abrir" e iniciá sesión o creá tu cuenta. Después, si querés, podés volver a desactivar el permiso de instalar apps desconocidas de tu navegador.',
+    short: 'Abrí Ya Quedó e iniciá sesión o creá tu cuenta.',
   },
 ];
 
-const INSTALL_STEPS = [
-  'Descargá el archivo .apk desde tu celular Android.',
-  'Al abrirlo, Android pedirá permiso para instalar apps de este origen: aceptalo solo para tu navegador.',
-  'Confirmá la instalación. Si Play Protect avisa que la app no es de Play Store, es esperado: la distribuimos directamente.',
-  'Abrí Ya Quedó e iniciá sesión o creá tu cuenta.',
-];
+// Version corta de la guia, para la lista de la seccion de descarga: una sola fuente, no dos textos que puedan divergir.
+const INSTALL_STEPS = INSTALL_GUIDE.map((step) => step.short);
 
 const Landing: React.FC = () => {
   const { session } = useAuth();
@@ -356,11 +356,15 @@ const Landing: React.FC = () => {
               <details key={item.q} className="landing-faq__item" style={{ '--i': i } as React.CSSProperties}>
                 <summary>{item.q}</summary>
                 <p>{item.a}</p>
-                {item.link && <Link to={item.link.to}>{item.link.label}</Link>}
-                {item.action === 'install' && (
-                  <button type="button" className="landing-btn landing-btn--small landing-faq__action" onClick={() => setInstallOpen(true)}>
-                    Ver paso a paso
-                  </button>
+                {(item.link || item.action) && (
+                  <div className="landing-faq__extra">
+                    {item.link && <Link to={item.link.to}>{item.link.label}</Link>}
+                    {item.action === 'install' && (
+                      <button type="button" className="landing-btn landing-btn--small" onClick={() => setInstallOpen(true)}>
+                        Ver paso a paso
+                      </button>
+                    )}
+                  </div>
                 )}
               </details>
             ))}

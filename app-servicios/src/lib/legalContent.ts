@@ -47,7 +47,7 @@ export const LEGAL_DOCS: Record<LegalKind, LegalDoc> = {
       {
         heading: 'Qué datos guardamos',
         items: [
-          'Tu cuenta: correo electrónico y contraseña. La contraseña se guarda cifrada: ni el equipo puede leerla.',
+          'Tu cuenta: correo electrónico y contraseña. La contraseña se guarda como un hash que no se puede revertir: ni el equipo puede leerla.',
           'Tu perfil: nombre completo y rol (cliente o profesional). El teléfono y la foto son opcionales.',
           'Si sos profesional: descripción, ubicación de trabajo y radio de servicio (ambos opcionales), los servicios que ofrecés con su precio, y los documentos de verificación que subas (DPI, licencia o certificación).',
           'Tu actividad: solicitudes, mensajes de chat, calificaciones, denuncias y notificaciones.',
