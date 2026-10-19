@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { IonPage, IonContent, IonIcon } from '@ionic/react';
+import { IonPage, IonContent, IonIcon, IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton } from '@ionic/react';
 import { hammerOutline, homeOutline, calendarOutline, personOutline } from 'ionicons/icons';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
@@ -112,6 +112,81 @@ const STEPS = [
   },
 ];
 
+// Preguntas frecuentes. Cada respuesta describe algo que la app hace hoy (comprobado contra el codigo y el esquema):
+// estados de una solicitud (trigger validate_booking_update), botones de cada pantalla, chat por solicitud, sello solo
+// por proceso autorizado (protect_is_verified), reseñas 1-5 con comentario (tabla reviews).
+//
+// OJO - "¿Qué hago si algo sale mal?" describe la reseña del CLIENTE hacia el profesional y su visibilidad en el perfil.
+// La base ya lo soporta (tabla reviews, lectura publica, solo sobre trabajos completados, editable), pero el front
+// todavia NO tiene el formulario para que el cliente la escriba ni la lista de reseñas en el perfil (solo el promedio de
+// estrellas). Hasta que existan, ese texto adelanta una funcion: no publicar sin resolverlo.
+interface FaqItem {
+  q: string;
+  a: string;
+  link?: { to: string; label: string };
+  /** 'install' agrega un boton que abre la ventana con el paso a paso de instalacion. */
+  action?: 'install';
+}
+
+const FAQ: FaqItem[] = [
+  {
+    q: '¿Cómo pido un servicio?',
+    a: 'Buscá un profesional por oficio, entrá a su perfil y tocá "Solicitar servicio" en el que necesitás. El profesional acepta o rechaza tu solicitud; si la acepta, coordinan los detalles por el chat, él inicia el trabajo y, cuando termina, lo marca como completado. Seguís cada paso desde "Mis solicitudes".',
+  },
+  {
+    q: '¿Cómo me hago profesional?',
+    a: 'Creá tu cuenta eligiendo el rol Profesional, completá tu perfil (descripción, zona de trabajo y radio de servicio) y publicá tus servicios con su precio desde "Mis servicios". Subir tus documentos para obtener el sello "Verificado" es opcional.',
+    link: { to: '/login?modo=registro&rol=profesional', label: 'Registrarme como profesional' },
+  },
+  {
+    q: '¿Cómo me comunico con el profesional o con el cliente?',
+    a: 'Cada solicitud tiene su propio chat, solo entre el cliente y el profesional: lo abrís con el botón "Chat" de la tarjeta de la solicitud y queda disponible mientras no esté cancelada. Cuando te escriben, te avisamos con una notificación dentro de la app.',
+  },
+  {
+    q: '¿Puedo cancelar una solicitud?',
+    a: 'Como cliente podés cancelarla con el botón "Cancelar solicitud" mientras esté solicitada o aceptada. Si el trabajo ya está en curso, coordinalo con el profesional por el chat: es él quien puede cancelarlo o marcarlo como completado.',
+  },
+  {
+    q: '¿Qué significa el sello "Verificado"?',
+    a: 'Los profesionales pueden subir su DPI, licencia o certificación desde su perfil. El sello lo otorga únicamente un proceso de verificación autorizado: nadie puede darse el sello a sí mismo ni cambiarlo desde la app.',
+  },
+  {
+    q: '¿Qué hago si algo sale mal?',
+    a: 'Ya Quedó no interviene en los acuerdos entre las personas, así que lo primero es aclararlo por el chat de la solicitud. Cuando el trabajo termina, tu calificación de 1 a 5 estrellas y tu reseña son tu voz: sirven para contar tu caso, desahogarte con respeto y avisar a quienes vengan después. El promedio de estrellas de cada profesional se ve en su perfil. Solo se puede reseñar un trabajo completado y podés editar tu reseña después. Los profesionales también califican a sus clientes.',
+  },
+  {
+    q: '¿Cómo instalo la app en mi celular?',
+    a: 'Descargás el archivo APK desde esta página, permitís que tu navegador instale apps y confirmás. Como la app no está en Play Store, Android te pide un par de confirmaciones extra: es normal.',
+    action: 'install',
+  },
+  {
+    q: '¿Qué pasa con mis datos?',
+    a: 'Guardamos solo lo necesario para que la app funcione, sin publicidad ni analítica de terceros, y tu sesión se cierra sola tras 30 minutos sin actividad. El detalle está en el aviso de privacidad.',
+    link: { to: '/privacidad', label: 'Leer el aviso de privacidad' },
+  },
+];
+
+// Paso a paso de la ventana de instalacion. Android cambia los nombres segun marca y version: el texto da la idea
+// general y la ventana lo aclara.
+const INSTALL_GUIDE = [
+  {
+    title: 'Descargá el APK',
+    text: 'Desde tu celular Android, tocá el botón de descarga. Si el navegador pregunta si querés conservar el archivo, aceptá.',
+  },
+  {
+    title: 'Permití la instalación',
+    text: 'Al abrir el archivo, Android avisa que no puede instalar apps desconocidas desde ese origen. Tocá "Configuración", activá "Permitir desde esta fuente" (solo afecta a tu navegador) y volvé atrás.',
+  },
+  {
+    title: 'Confirmá la instalación',
+    text: 'Tocá "Instalar". Si Play Protect avisa que la app no es de Play Store, tocá "Más detalles" y luego "Instalar de todos modos": es esperado, la distribuimos directamente.',
+  },
+  {
+    title: 'Abrí Ya Quedó',
+    text: 'Tocá "Abrir" e iniciá sesión o creá tu cuenta. Después, si querés, podés volver a desactivar el permiso de instalar apps desconocidas de tu navegador.',
+  },
+];
+
 const INSTALL_STEPS = [
   'Descargá el archivo .apk desde tu celular Android.',
   'Al abrirlo, Android pedirá permiso para instalar apps de este origen: aceptalo solo para tu navegador.',
@@ -124,6 +199,7 @@ const Landing: React.FC = () => {
   useReveal();
   usePauseHeroOffscreen();
   const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES);
+  const [installOpen, setInstallOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +247,7 @@ const Landing: React.FC = () => {
           <nav className="landing-nav__links" aria-label="Secciones">
             <a href="#como-funciona">Cómo funciona</a>
             <a href="#profesionales">Profesionales</a>
+            <a href="#preguntas">Preguntas</a>
             <a href="#descargar">Android</a>
           </nav>
           <Link className="landing-btn landing-btn--small" to={appPath}>
@@ -254,6 +331,8 @@ const Landing: React.FC = () => {
             {categories.map((name, i) => (
               <li key={name} className="landing-chip" style={{ '--i': i } as React.CSSProperties}>{name}</li>
             ))}
+            {/* Fijo y siempre al final: los oficios de arriba son solo los que ya estan cargados, hay mas. */}
+            <li className="landing-chip landing-chip--more" style={{ '--i': categories.length } as React.CSSProperties}>Otros</li>
           </ul>
         </section>
 
@@ -268,6 +347,24 @@ const Landing: React.FC = () => {
               </li>
             ))}
           </ol>
+        </section>
+
+        <section className="landing-section" id="preguntas" aria-labelledby="t-preguntas">
+          <h2 id="t-preguntas" data-reveal>Preguntas frecuentes</h2>
+          <div className="landing-faq" data-reveal>
+            {FAQ.map((item, i) => (
+              <details key={item.q} className="landing-faq__item" style={{ '--i': i } as React.CSSProperties}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+                {item.link && <Link to={item.link.to}>{item.link.label}</Link>}
+                {item.action === 'install' && (
+                  <button type="button" className="landing-btn landing-btn--small landing-faq__action" onClick={() => setInstallOpen(true)}>
+                    Ver paso a paso
+                  </button>
+                )}
+              </details>
+            ))}
+          </div>
         </section>
 
         <section className="landing-section landing-pro" id="profesionales" aria-labelledby="t-pro">
@@ -316,9 +413,52 @@ const Landing: React.FC = () => {
 
         <footer className="landing-footer">
           <span>© {new Date().getFullYear()} {APP_NAME}</span>
-          <Link to={appPath}>{session ? 'Ir a mi cuenta' : 'Ingresar'}</Link>
+          <nav className="landing-footer__links" aria-label="Información legal">
+            <Link to="/privacidad">Privacidad</Link>
+            <Link to="/terminos">Términos</Link>
+            <Link to={appPath}>{session ? 'Ir a mi cuenta' : 'Ingresar'}</Link>
+          </nav>
         </footer>
       </IonContent>
+
+      <IonModal isOpen={installOpen} onDidDismiss={() => setInstallOpen(false)} className="landing-install-modal">
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Instalar la app</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setInstallOpen(false)}>Cerrar</IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <ol className="landing-install-guide">
+            {INSTALL_GUIDE.map((step, i) => (
+              <li key={step.title}>
+                <span className="landing-install-guide__num" aria-hidden="true">{i + 1}</span>
+                <div>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                  {i === 0 && (apkAvailable ? (
+                    <a className="landing-btn landing-btn--small" href={APK_RELEASE.url} rel="noopener">
+                      Descargar APK{sizeMb ? ` (${sizeMb} MB)` : ''}
+                    </a>
+                  ) : (
+                    <p className="landing-install-guide__soon">La descarga estará disponible pronto. Mientras tanto, podés usar la versión web.</p>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="landing-install-guide__note">
+            Los nombres exactos de los botones cambian un poco según la marca y la versión de Android.
+          </p>
+          {apkAvailable && (
+            <p className="landing-install-guide__note">
+              ¿Querés comprobar que el archivo es el original? Compará su huella SHA-256 con esta: <code>{sha256}</code>
+            </p>
+          )}
+        </IonContent>
+      </IonModal>
     </IonPage>
   );
 };

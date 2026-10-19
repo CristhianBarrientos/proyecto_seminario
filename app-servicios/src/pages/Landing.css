@@ -308,6 +308,9 @@
   display: flex;
   gap: 6px;
   overflow: hidden;
+  /* La fila no cabe entera: el borde derecho se desvanece para que el corte se lea como "hay mas" y no como un chip roto. */
+  -webkit-mask-image: linear-gradient(to right, #000 78%, transparent);
+  mask-image: linear-gradient(to right, #000 78%, transparent);
 }
 
 .landing-phone__chips span {
@@ -497,6 +500,12 @@
   transition-delay: calc(var(--i, 0) * 70ms), 0s, 0s, 0s, 0s;
 }
 
+/* "Otros": no es un oficio cargado sino la senal de que hay mas; borde punteado y sin relleno. */
+.landing-chip--more {
+  background: transparent;
+  border-style: dashed;
+}
+
 .landing-chip:hover {
   transform: translateY(-3px);
   background: var(--ion-color-secondary);
@@ -684,7 +693,11 @@
 
 /* --- Footer --- */
 .landing-footer {
+  /* El gris de apoyo del sistema da ~4.3:1 sobre el fondo claro (bajo el 4.5:1 de WCAG AA); en el pie hay enlaces
+     legales y conviene que se lean bien. Se mezcla un poco con el color de texto, sin tocar el tema global. */
+  --footer-muted: color-mix(in srgb, var(--ion-color-medium) 70%, var(--ion-text-color));
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   max-width: 960px;
@@ -692,15 +705,119 @@
   padding: 24px 20px 32px;
   border-top: 1px solid var(--ion-border-color);
   font-size: 0.85rem;
-  color: var(--ion-color-medium);
+  color: var(--footer-muted);
 }
 
 .landing-footer a {
-  color: var(--ion-color-medium);
+  color: var(--footer-muted);
   font-weight: 600;
 }
 
+.landing-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+/* --- Preguntas frecuentes (details/summary nativo: accesible por teclado y sin JS) --- */
+.landing-faq {
+  display: grid;
+  gap: 12px;
+}
+
+.landing-faq__item {
+  background: var(--app-surface);
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.landing-faq__item:hover,
+.landing-faq__item[open] {
+  border-color: var(--ion-color-secondary);
+}
+
+.landing-faq__item[open] {
+  box-shadow: var(--app-shadow-md);
+}
+
+.landing-faq__item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  list-style: none;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+
+.landing-faq__item summary::-webkit-details-marker {
+  display: none;
+}
+
+.landing-faq__item summary::after {
+  content: '+';
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.landing-faq__item[open] summary::after {
+  content: '−';
+}
+
+.landing-faq__item summary:focus-visible {
+  outline: 3px solid var(--ion-color-tertiary);
+  outline-offset: 2px;
+  border-radius: var(--app-radius-md);
+}
+
+.landing-faq__item p {
+  margin: 0;
+  padding: 0 22px 18px;
+  color: var(--ion-color-medium);
+  line-height: 1.6;
+}
+
+.landing-faq__action {
+  margin: 0 22px 18px;
+}
+
+/* El ambar de marca no alcanza contraste como texto sobre fondo claro (2:1): el enlace va en el color de texto y el
+   ambar queda en el subrayado. */
+.landing-faq__item a {
+  display: inline-block;
+  margin: -6px 22px 18px;
+  font-weight: 700;
+  color: var(--ion-text-color);
+  text-decoration: underline;
+  text-decoration-color: var(--ion-color-secondary);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.landing-faq__item[open] > :not(summary) {
+  animation: landing-faq-in 0.3s ease;
+}
+
 /* --- Animaciones --- */
+@keyframes landing-faq-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 @keyframes landing-gradient {
   50% {
     background-position: 100% 100%;
@@ -842,6 +959,10 @@
     animation: none;
   }
 
+  .landing-faq__item[open] > :not(summary) {
+    animation: none;
+  }
+
   .landing-word > span,
   .landing-rise,
   .landing-phone,
@@ -868,4 +989,76 @@
 .landing-hero,
 .landing-section {
   scroll-margin-top: calc(var(--landing-nav-h) + 8px);
+}
+
+/* --- Ventana: paso a paso de instalacion (ion-modal vive fuera de .landing-content, por eso las variables van aca) --- */
+.landing-install-modal {
+  --width: min(560px, 94vw);
+  --height: min(680px, 90vh);
+  --border-radius: var(--app-radius-lg);
+  --landing-muted: color-mix(in srgb, var(--ion-color-medium) 70%, var(--ion-text-color));
+}
+
+.landing-install-guide {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-install-guide li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  padding: 16px;
+  background: var(--app-surface);
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--app-radius-md);
+}
+
+.landing-install-guide__num {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+  font-weight: 800;
+}
+
+.landing-install-guide h3 {
+  margin: 0 0 4px;
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+
+.landing-install-guide p {
+  margin: 0 0 10px;
+  color: var(--landing-muted);
+  line-height: 1.55;
+}
+
+.landing-install-guide li > div > :last-child {
+  margin-bottom: 0;
+}
+
+.landing-install-guide a.landing-btn {
+  text-decoration: none;
+}
+
+.landing-install-guide__note {
+  margin: 16px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--landing-muted);
+}
+
+.landing-install-guide__note code {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  word-break: break-all;
+  color: var(--ion-text-color);
 }

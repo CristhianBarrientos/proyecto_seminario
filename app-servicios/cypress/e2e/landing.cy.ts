@@ -16,6 +16,10 @@ describe('Landing', () => {
       }
     });
 
+    it('"Otros" cierra la lista de oficios: hay mas de los que estan cargados', () => {
+      cy.get('.landing-chips .landing-chip').last().should('have.text', 'Otros');
+    });
+
     it('la descarga del APK depende de que haya una versión publicada con su SHA-256', () => {
       // La landing solo ofrece el APK con version Y sha256 (no se publica un binario sin checksum).
       if (APK_RELEASE.version !== null && APK_RELEASE.sha256 !== null) {
@@ -87,7 +91,7 @@ describe('Landing', () => {
     });
 
     it('los enlaces de la barra dejan el título de la sección visible, no tapado por la barra sticky', () => {
-      for (const [texto, id] of [['Cómo funciona', 'como-funciona'], ['Profesionales', 'profesionales'], ['Android', 'descargar']]) {
+      for (const [texto, id] of [['Cómo funciona', 'como-funciona'], ['Profesionales', 'profesionales'], ['Preguntas', 'preguntas'], ['Android', 'descargar']]) {
         cy.contains('.landing-nav__links a', texto).click();
         // `should` con callback reintenta hasta que termina el scroll suave (sin esperas fijas). Nav y
         // seccion se miden respecto del mismo viewport, asi que la comparacion es valida aunque el scroll
@@ -98,6 +102,49 @@ describe('Landing', () => {
           expect(section.top, `la sección #${id} no debe quedar bajo la barra`).to.be.at.least(nav.bottom - 1);
         });
       }
+    });
+  });
+
+  describe('preguntas frecuentes y pie legal', () => {
+    beforeEach(() => {
+      cy.visit('/');
+    });
+
+    it('las preguntas se abren y se cierran con su respuesta', () => {
+      cy.get('.landing-faq__item').should('have.length', 8);
+      cy.contains('.landing-faq__item summary', 'Verificado').click({ scrollBehavior: 'center' });
+      cy.contains('.landing-faq__item[open]', 'proceso de verificación autorizado').should('exist');
+      cy.contains('.landing-faq__item summary', 'Verificado').click();
+      cy.get('.landing-faq__item[open]').should('not.exist');
+    });
+
+    it('"Cómo instalo la app" abre una ventana con el paso a paso y se cierra', () => {
+      cy.contains('.landing-faq__item summary', 'Cómo instalo la app').click({ scrollBehavior: 'center' });
+      cy.contains('.landing-faq__item[open] button', 'Ver paso a paso').click();
+      cy.get('ion-modal.landing-install-modal').should('be.visible');
+      cy.contains('ion-modal .landing-install-guide h3', 'Permití la instalación').should('be.visible');
+      cy.contains('ion-modal ion-button', 'Cerrar').click();
+      cy.get('ion-modal.landing-install-modal').should('not.exist');
+    });
+
+    it('"Cómo me hago profesional" lleva al alta ya posicionada como profesional', () => {
+      cy.contains('.landing-faq__item summary', 'Cómo me hago profesional').click({ scrollBehavior: 'center' });
+      cy.contains('.landing-faq__item[open] a', 'Registrarme como profesional').click();
+      cy.location('pathname').should('eq', '/login');
+      cy.location('search').should('eq', '?modo=registro&rol=profesional');
+    });
+
+    it('el pie lleva al aviso de privacidad y a los términos, sin pedir sesión', () => {
+      cy.contains('.landing-footer__links a', 'Privacidad').click({ scrollBehavior: 'center' });
+      cy.location('pathname').should('eq', '/privacidad');
+      cy.contains('h1', 'Aviso de privacidad').should('be.visible');
+
+      cy.contains('.legal-footer a', 'Términos de uso').click({ scrollBehavior: 'center' });
+      cy.location('pathname').should('eq', '/terminos');
+      cy.contains('h1', 'Términos de uso').should('be.visible');
+
+      cy.contains('a', 'Volver al inicio').click();
+      cy.location('pathname').should('eq', '/');
     });
   });
 
