@@ -36,9 +36,9 @@ function setup(overrides: Partial<React.ComponentProps<typeof ReviewForm>> = {})
   const props = {
     existing: undefined,
     professionalName: 'Carlos',
-    onSubmit: vi.fn().mockResolvedValue(true),
-    onUpdate: vi.fn().mockResolvedValue(true),
-    onDelete: vi.fn().mockResolvedValue(true),
+    onSubmit: vi.fn().mockResolvedValue(null),
+    onUpdate: vi.fn().mockResolvedValue(null),
+    onDelete: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
   const utils = render(<ReviewForm {...props} />);
@@ -84,8 +84,8 @@ describe('<ReviewForm /> sin reseña previa', () => {
     await waitFor(() => expect(ionButton(container, 'Calificar profesional')).toBeTruthy());
   });
 
-  it('si falla, el formulario sigue abierto con lo que escribió', async () => {
-    const { container, onSubmit } = setup({ onSubmit: vi.fn().mockResolvedValue(false) });
+  it('si falla, el formulario sigue abierto con lo escrito y muestra el motivo junto a los botones', async () => {
+    const { container, onSubmit } = setup({ onSubmit: vi.fn().mockResolvedValue('Solo se puede reseñar un servicio completado') });
     fireEvent.click(ionButton(container, 'Calificar profesional')!);
     fireEvent.click(screen.getByRole('radio', { name: '2 estrellas' }));
     typeComment('Tardó demasiado');
@@ -94,6 +94,18 @@ describe('<ReviewForm /> sin reseña previa', () => {
     expect(ionButton(container, 'Publicar reseña')).toBeTruthy();
     expect(screen.getByRole('radio', { name: '2 estrellas' }).getAttribute('aria-checked')).toBe('true');
     expect((screen.getByLabelText(COMMENT_LABEL) as HTMLTextAreaElement).value).toBe('Tardó demasiado');
+    expect(screen.getByRole('alert').textContent).toBe('Solo se puede reseñar un servicio completado');
+  });
+
+  it('al cancelar y volver a abrir, el error anterior ya no aparece', async () => {
+    const { container } = setup({ onSubmit: vi.fn().mockResolvedValue('Falló') });
+    fireEvent.click(ionButton(container, 'Calificar profesional')!);
+    fireEvent.click(screen.getByRole('radio', { name: '3 estrellas' }));
+    fireEvent.click(ionButton(container, 'Publicar reseña')!);
+    await screen.findByRole('alert');
+    fireEvent.click(ionButton(container, 'Cancelar')!);
+    fireEvent.click(ionButton(container, 'Calificar profesional')!);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('el comentario tiene tope de 500 caracteres', () => {
@@ -156,5 +168,13 @@ describe('<ReviewForm /> con reseña previa', () => {
     fireEvent.click(ionButton(container, 'Eliminar')!);
     fireEvent.click(ionButton(container, 'Sí, eliminar')!);
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith(existing));
+  });
+
+  it('si eliminar falla muestra el motivo y mantiene la reseña a la vista de la confirmación', async () => {
+    const { container } = setup({ existing, onDelete: vi.fn().mockResolvedValue('No se pudo eliminar') });
+    fireEvent.click(ionButton(container, 'Eliminar')!);
+    fireEvent.click(ionButton(container, 'Sí, eliminar')!);
+    expect((await screen.findByRole('alert')).textContent).toBe('No se pudo eliminar');
+    expect(screen.getByText('¿Eliminar tu reseña?')).toBeTruthy();
   });
 });

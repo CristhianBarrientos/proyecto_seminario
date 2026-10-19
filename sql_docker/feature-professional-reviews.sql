@@ -74,12 +74,17 @@ as $$
 $$;
 
 -- ------------------------------------------------------------
--- 5. Reseñas de un profesional (paginadas por fecha, mas nuevas primero)
+-- 5. Reseñas de un profesional (paginadas, mas nuevas primero)
+--    Cursor por (created_at, id): si dos reseñas comparten fecha justo en el corte de una pagina, ninguna se salta.
+--    Se pide la siguiente pagina con la fecha y el id de la ULTIMA reseña recibida.
 -- ------------------------------------------------------------
+drop function if exists public.professional_reviews(uuid, int, timestamptz);
+
 create or replace function public.professional_reviews(
   p_professional_id uuid,
   p_limit int default 20,
-  p_before timestamptz default null
+  p_before timestamptz default null,
+  p_before_id uuid default null
 )
 returns table (
   id uuid,
@@ -110,10 +115,14 @@ as $$
   left join public.bookings b on b.id = r.booking_id
   left join public.services s on s.id = b.service_id
   where r.professional_id = p_professional_id
-    and (p_before is null or r.created_at < p_before)
-  order by r.created_at desc
+    and (
+      p_before is null
+      or r.created_at < p_before
+      or (p_before_id is not null and r.created_at = p_before and r.id < p_before_id)
+    )
+  order by r.created_at desc, r.id desc
   limit least(greatest(coalesce(p_limit, 20), 1), 50)
 $$;
 
-revoke all on function public.professional_reviews(uuid, int, timestamptz) from public, anon;
-grant execute on function public.professional_reviews(uuid, int, timestamptz) to authenticated;
+revoke all on function public.professional_reviews(uuid, int, timestamptz, uuid) from public, anon;
+grant execute on function public.professional_reviews(uuid, int, timestamptz, uuid) to authenticated;

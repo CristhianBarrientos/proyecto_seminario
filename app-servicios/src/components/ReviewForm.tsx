@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IonButton, IonIcon, IonTextarea } from '@ionic/react';
+import { IonButton, IonIcon, IonText, IonTextarea } from '@ionic/react';
 import { starOutline } from 'ionicons/icons';
 import StarRating from './StarRating';
 import { MAX_REVIEW_COMMENT, type MyReview } from '../lib/useMyReviews';
@@ -10,9 +10,10 @@ interface Props {
   existing: MyReview | undefined;
   /** Para el aviso de que la reseña es pública ("el perfil de ..."). */
   professionalName: string | null;
-  onSubmit: (rating: number, comment: string) => Promise<boolean>;
-  onUpdate: (review: MyReview, rating: number, comment: string) => Promise<boolean>;
-  onDelete: (review: MyReview) => Promise<boolean>;
+  /** Cada acción devuelve null si salió bien o el mensaje de error para mostrarlo acá, junto a los botones. */
+  onSubmit: (rating: number, comment: string) => Promise<string | null>;
+  onUpdate: (review: MyReview, rating: number, comment: string) => Promise<string | null>;
+  onDelete: (review: MyReview) => Promise<string | null>;
 }
 
 type Mode = 'idle' | 'editing' | 'confirmDelete';
@@ -27,22 +28,37 @@ const ReviewForm: React.FC<Props> = ({ existing, professionalName, onSubmit, onU
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState('');
+
+  const goTo = (next: Mode) => {
+    setFormError('');
+    setMode(next);
+  };
 
   const startEditing = () => {
     setRating(existing?.rating ?? 0);
     setComment(existing?.comment ?? '');
-    setMode('editing');
+    goTo('editing');
   };
 
-  const run = async (action: () => Promise<boolean>) => {
+  const run = async (action: () => Promise<string | null>) => {
     if (busy) return;
     setBusy(true);
+    setFormError('');
     try {
-      if (await action()) setMode('idle');
+      const failure = await action();
+      if (failure) setFormError(failure);
+      else setMode('idle');
     } finally {
       setBusy(false);
     }
   };
+
+  const errorLine = formError && (
+    <IonText color="danger">
+      <p className="review-box__error" role="alert">{formError}</p>
+    </IonText>
+  );
 
   const handleSave = () => {
     if (rating < 1) return;
@@ -68,11 +84,12 @@ const ReviewForm: React.FC<Props> = ({ existing, professionalName, onSubmit, onU
           Tu reseña es pública: la verá cualquiera que mire el perfil de {professionalName ?? 'este profesional'}. Escribila con
           honestidad y respeto.
         </p>
+        {errorLine}
         <div className="review-box__actions">
           <IonButton fill="solid" color="tertiary" disabled={busy || rating < 1} onClick={handleSave}>
             {existing ? 'Guardar cambios' : 'Publicar reseña'}
           </IonButton>
-          <IonButton fill="clear" color="medium" disabled={busy} onClick={() => setMode('idle')}>
+          <IonButton fill="clear" color="medium" disabled={busy} onClick={() => goTo('idle')}>
             Cancelar
           </IonButton>
         </div>
@@ -85,11 +102,12 @@ const ReviewForm: React.FC<Props> = ({ existing, professionalName, onSubmit, onU
       <div className="review-box">
         <p className="review-box__title">¿Eliminar tu reseña?</p>
         <p className="review-box__hint">Dejará de verse en el perfil del profesional y cuenta de nuevo para el promedio.</p>
+        {errorLine}
         <div className="review-box__actions">
           <IonButton fill="solid" color="danger" disabled={busy} onClick={() => run(() => onDelete(existing))}>
             Sí, eliminar
           </IonButton>
-          <IonButton fill="clear" color="medium" disabled={busy} onClick={() => setMode('idle')}>
+          <IonButton fill="clear" color="medium" disabled={busy} onClick={() => goTo('idle')}>
             Conservarla
           </IonButton>
         </div>
@@ -107,7 +125,7 @@ const ReviewForm: React.FC<Props> = ({ existing, professionalName, onSubmit, onU
         {existing.comment && <p className="review-box__comment">{existing.comment}</p>}
         <div className="review-box__actions">
           <IonButton fill="clear" size="small" onClick={startEditing}>Editar</IonButton>
-          <IonButton fill="clear" size="small" color="danger" onClick={() => setMode('confirmDelete')}>Eliminar</IonButton>
+          <IonButton fill="clear" size="small" color="danger" onClick={() => goTo('confirmDelete')}>Eliminar</IonButton>
         </div>
       </div>
     );

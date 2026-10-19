@@ -27,8 +27,8 @@ export interface MyReview {
 /**
  * Reseñas que el CLIENTE dejó a los profesionales (tabla reviews, ver sql_docker/feature-professional-reviews.sql).
  * Es el espejo de useClientReviews (que es profesional -> cliente). Carga las propias por reserva para saber
- * a cuáles ofrecer "Calificar", y expone crear / editar / eliminar. Cada acción devuelve true si se concretó,
- * para que el formulario sepa si cerrarse.
+ * a cuáles ofrecer "Calificar", y expone crear / editar / eliminar. Cada acción devuelve null si se concretó o el
+ * mensaje de error para mostrarlo junto al formulario.
  */
 export function useMyReviews(clientId: string, bookings: BookingListItem[]) {
   const [reviewByBooking, setReviewByBooking] = useState<Map<string, MyReview>>(new Map());
@@ -55,11 +55,15 @@ export function useMyReviews(clientId: string, bookings: BookingListItem[]) {
     const { data, error: loadError } = await supabase
       .from('reviews')
       .select('id, booking_id, rating, comment, updated_at')
-      .eq('client_id', clientId);
+      .eq('client_id', clientId)
+      .in('booking_id', completedKey.split(','));
 
     if (myRequest !== requestId.current) return;
     if (loadError) {
       setError(getFriendlyErrorMessage(loadError));
+      // Aun con error se marca como cargado: si no, "Calificar profesional" desaparece hasta recargar la pagina. Si ya
+      // habia una reseña, la base rechaza el duplicado (una por trabajo) y el formulario muestra el motivo.
+      setLoaded(true);
       return;
     }
 
@@ -76,15 +80,14 @@ export function useMyReviews(clientId: string, bookings: BookingListItem[]) {
     load();
   }, [load]);
 
-  const run = async (action: () => PromiseLike<{ error: unknown }>): Promise<boolean> => {
+  // Devuelve null si salio bien o el mensaje para el usuario si no: el formulario lo muestra junto a sus botones
+  // (antes quedaba arriba de la lista, lejos de donde se toco "Publicar").
+  const run = async (action: () => PromiseLike<{ error: unknown }>): Promise<string | null> => {
     const { error: actionError } = await action();
-    if (actionError) {
-      setError(getFriendlyErrorMessage(actionError));
-      return false;
-    }
+    if (actionError) return getFriendlyErrorMessage(actionError);
     setError('');
     await load();
-    return true;
+    return null;
   };
 
   const submitReview = (booking: BookingListItem, rating: number, comment: string) =>

@@ -5,9 +5,14 @@ const calls = {
   insert: [] as unknown[],
   update: [] as unknown[],
   del: [] as unknown[],
+  inFilter: [] as unknown[],
 };
 let rows: unknown[] = [];
+let loadFails = false;
 let failNext: { code: string; message: string } | null = null;
+
+const loadResult = () =>
+  Promise.resolve(loadFails ? { data: null, error: { code: 'XX000', message: 'boom' } } : { data: rows, error: null });
 
 const result = () => {
   const error = failNext;
@@ -18,7 +23,9 @@ const result = () => {
 vi.mock('./supabaseClient', () => ({
   supabase: {
     from: () => ({
-      select: () => ({ eq: () => Promise.resolve({ data: rows, error: null }) }),
+      select: () => ({
+        eq: () => ({ in: (col: string, ids: string[]) => { calls.inFilter.push([col, ids]); return loadResult(); } }),
+      }),
       insert: (v: unknown) => { calls.insert.push(v); return result(); },
       update: (v: unknown) => ({ eq: (col: string, val: string) => { calls.update.push([v, col, val]); return result(); } }),
       delete: () => ({ eq: (col: string, val: string) => { calls.del.push([col, val]); return result(); } }),
@@ -38,7 +45,9 @@ beforeEach(() => {
   calls.insert = [];
   calls.update = [];
   calls.del = [];
+  calls.inFilter = [];
   rows = [];
+  loadFails = false;
   failNext = null;
 });
 
@@ -51,6 +60,19 @@ describe('useMyReviews', () => {
     expect(result.current.reviewByBooking.get('b1')).toEqual({ id: 'r1', rating: 4, comment: 'Bien', edited: true });
   });
 
+  it('solo pide las reseñas de las reservas completadas (no todo el historial)', async () => {
+    const { result } = renderHook(() => useMyReviews('cli-1', bookings));
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(calls.inFilter[0]).toEqual(['booking_id', ['b1']]);
+  });
+
+  it('si la carga falla igual queda listo (no oculta "Calificar") y muestra el error', async () => {
+    loadFails = true;
+    const { result } = renderHook(() => useMyReviews('cli-1', bookings));
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.error).toMatch(/Ocurrió un problema/);
+  });
+
   it('sin reservas completadas no hay nada que cargar y queda listo', async () => {
     const { result } = renderHook(() => useMyReviews('cli-1', [booking('b2', 'solicitado')]));
     await waitFor(() => expect(result.current.loaded).toBe(true));
@@ -60,9 +82,9 @@ describe('useMyReviews', () => {
   it('publicar: manda la reserva, el profesional y el comentario recortado', async () => {
     const { result } = renderHook(() => useMyReviews('cli-1', bookings));
     await waitFor(() => expect(result.current.loaded).toBe(true));
-    let ok = false;
-    await act(async () => { ok = await result.current.submitReview(bookings[0], 5, '  Excelente  '); });
-    expect(ok).toBe(true);
+    let outcome: string | null = 'sin ejecutar';
+    await act(async () => { outcome = await result.current.submitReview(bookings[0], 5, '  Excelente  '); });
+    expect(outcome).toBeNull();
     expect(calls.insert[0]).toEqual({ booking_id: 'b1', client_id: 'cli-1', professional_id: 'pro-1', rating: 5, comment: 'Excelente' });
   });
 
@@ -83,13 +105,12 @@ describe('useMyReviews', () => {
     expect(calls.del[0]).toEqual(['id', 'r1']);
   });
 
-  it('si la base rechaza (p. ej. el trabajo no está completado) devuelve false y muestra el mensaje', async () => {
+  it('si la base rechaza (p. ej. el trabajo no está completado) devuelve el mensaje para el formulario', async () => {
     const { result } = renderHook(() => useMyReviews('cli-1', bookings));
     await waitFor(() => expect(result.current.loaded).toBe(true));
     failNext = { code: 'P0001', message: 'Solo se puede reseñar un servicio completado' };
-    let ok = true;
-    await act(async () => { ok = await result.current.submitReview(bookings[0], 5, ''); });
-    expect(ok).toBe(false);
-    expect(result.current.error).toBe('Solo se puede reseñar un servicio completado');
+    let outcome: string | null = null;
+    await act(async () => { outcome = await result.current.submitReview(bookings[0], 5, ''); });
+    expect(outcome).toBe('Solo se puede reseñar un servicio completado');
   });
 });
