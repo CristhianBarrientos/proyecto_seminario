@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import { unregisterPush } from '../lib/pushNotifications';
 
 type Role = 'cliente' | 'profesional';
 
@@ -159,6 +160,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const retryRole = () => setRoleAttempt((n) => n + 1);
 
   const signOut = async () => {
+    // Antes de cerrar: el DELETE del token de push necesita la sesión vigente.
+    await unregisterPush();
     await supabase.auth.signOut();
   };
 

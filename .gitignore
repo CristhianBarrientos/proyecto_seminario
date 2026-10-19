@@ -48,3 +48,8 @@ keystore.properties
 *.aab
 
 app-servicios/dist-apk/
+
+# Firebase / FCM: la service account es SECRETA (envio de push); google-services.json se copia al build, no se versiona
+FIREBASE/
+*firebase-adminsdk*.json
+fcm-service-account*.json

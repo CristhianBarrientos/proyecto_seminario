@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import IdleSessionGuard from './components/IdleSessionGuard';
+import PushRegistrar from './components/PushRegistrar';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -41,6 +42,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <IonReactRouter>
+      <PushRegistrar />
       <IonRouterOutlet>
         <Route
           path="/login"
