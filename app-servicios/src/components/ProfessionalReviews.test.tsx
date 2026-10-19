@@ -30,7 +30,7 @@ describe('<ProfessionalReviews />', () => {
     rpc.mockResolvedValue({ data: [], error: null });
     render(<ProfessionalReviews professionalId="p1" emptyText="Todavía no tiene reseñas." />);
     expect(await screen.findByText('Todavía no tiene reseñas.')).toBeTruthy();
-    expect(rpc).toHaveBeenCalledWith('professional_reviews', { p_professional_id: 'p1', p_limit: 10, p_before: null });
+    expect(rpc).toHaveBeenCalledWith('professional_reviews', { p_professional_id: 'p1', p_limit: 10, p_before: null, p_before_id: null });
   });
 
   it('muestra autor abreviado, servicio, comentario, "editada" y "Tu reseña"', async () => {
@@ -44,7 +44,7 @@ describe('<ProfessionalReviews />', () => {
     expect(screen.queryByText('Ver más reseñas')).toBeNull();
   });
 
-  it('pagina: "Ver más" pide la siguiente página desde la última fecha y no repite ids', async () => {
+  it('pagina: "Ver más" pide la siguiente página desde la última reseña (fecha + id) y no repite ids', async () => {
     const first = Array.from({ length: 10 }, (_, i) => review(i + 1));
     // la segunda página repite la ultima de la primera (como si una reseña nueva hubiera movido el corte)
     const second = [review(10), review(11)];
@@ -60,6 +60,7 @@ describe('<ProfessionalReviews />', () => {
       p_professional_id: 'p1',
       p_limit: 10,
       p_before: first[9].created_at,
+      p_before_id: first[9].id,
     });
     expect(screen.getAllByRole('listitem')).toHaveLength(11);
     await waitFor(() => expect(ionButton(container, 'Ver más reseñas')).toBeUndefined());

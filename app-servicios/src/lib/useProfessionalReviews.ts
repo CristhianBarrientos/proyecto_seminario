@@ -20,7 +20,7 @@ const professionalReviewSchema = z.object({
 export type ProfessionalReview = z.infer<typeof professionalReviewSchema>;
 
 /**
- * Reseñas que recibió un profesional, de la más nueva a la más vieja y paginadas de a PAGE_SIZE.
+ * Reseñas que recibió un profesional, de la más nueva a la más vieja y paginadas de a PAGE_SIZE (cursor por fecha + id).
  * Sale de la función professional_reviews (sql_docker/feature-professional-reviews.sql), que devuelve el nombre
  * del autor abreviado y no expone ids de personas: la tabla reviews ya no es legible para terceros.
  */
@@ -34,11 +34,12 @@ export function useProfessionalReviews(professionalId: string | undefined) {
   const currentId = useRef(professionalId);
   currentId.current = professionalId;
 
-  const fetchPage = useCallback(async (before: string | null) => {
+  const fetchPage = useCallback(async (cursor: { createdAt: string; id: string } | null) => {
     const { data, error: rpcError } = await supabase.rpc('professional_reviews', {
       p_professional_id: professionalId,
       p_limit: PAGE_SIZE,
-      p_before: before,
+      p_before: cursor?.createdAt ?? null,
+      p_before_id: cursor?.id ?? null,
     });
     if (rpcError) throw rpcError;
     return parseRowsOrDrop(professionalReviewSchema, data ?? [], 'useProfessionalReviews.page');
@@ -76,7 +77,7 @@ export function useProfessionalReviews(professionalId: string | undefined) {
     if (!last || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await fetchPage(last.created_at);
+      const page = await fetchPage({ createdAt: last.created_at, id: last.id });
       if (currentId.current !== professionalId) return;
       // Por si una reseña nueva desplazó la paginación: no se repiten ids ya mostrados.
       setReviews((prev) => {
