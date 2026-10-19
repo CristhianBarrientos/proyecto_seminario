@@ -19,6 +19,11 @@ const PHONE_ROWS = [
   { initials: 'CT', name: 'Carlos T.', trade: 'Carpintería', rating: '4.9' },
 ];
 
+// Filtros de la maqueta. El seleccionado es "Todos" porque las filas muestran varios oficios: un oficio
+// resaltado (p. ej. el primero de la base, Albañilería) contradiría la lista. Son fijos a propósito, no
+// vienen de `categories`: la maqueta debe verse igual haya o no carga de la base.
+const PHONE_CHIPS = ['Todos', ...PHONE_ROWS.slice(0, 3).map((row) => row.trade)];
+
 // Revela con una animacion los bloques marcados con `data-reveal` cuando entran en pantalla. Al terminar se
 // les quita la marca para que su hover/transform propio no quede pisado. Sin IntersectionObserver o con
 // "reducir movimiento" se muestran de una vez.
@@ -180,14 +185,14 @@ const Landing: React.FC = () => {
             </div>
 
             {/* Maqueta decorativa de la app: no es interactiva ni accesible. */}
-            <div className="landing-phone landing-rise" style={{ '--d': 3 } as React.CSSProperties} aria-hidden="true">
+            <div className="landing-phone" style={{ '--d': 3 } as React.CSSProperties} aria-hidden="true">
               <div className="landing-phone__screen">
                 <span className="landing-phone__notch" />
                 <div className="landing-phone__top">
                   <div className="landing-phone__logo"><IonIcon icon={hammerOutline} /></div>
                   <strong>Oficios cerca de ti</strong>
                   <div className="landing-phone__chips">
-                    {categories.slice(0, 4).map((name, i) => (
+                    {PHONE_CHIPS.map((name, i) => (
                       <span key={name} className={i === 0 ? 'is-on' : undefined}>{name}</span>
                     ))}
                   </div>

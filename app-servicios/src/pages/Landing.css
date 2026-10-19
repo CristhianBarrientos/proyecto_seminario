@@ -243,7 +243,13 @@
   border-radius: 40px;
   background: #0d1014;
   box-shadow: 0 44px 70px -30px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  /* La entrada (landing-rise) y el flotado no pueden compartir `animation`: el flotado va en un hijo. */
+  /* Se mueve el telefono ENTERO (marco, pantalla y aviso). La entrada anima `transform` y el flotado anima
+     `translate`/`rotate` (propiedades independientes), asi que conviven en el mismo `animation`. */
+  opacity: 0;
+  animation:
+    landing-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards,
+    landing-float 7s ease-in-out infinite;
+  animation-delay: calc(var(--d, 0) * 90ms + 100ms), 0s;
 }
 
 .landing-phone__screen {
@@ -255,7 +261,6 @@
   border-radius: 31px;
   background: var(--ion-background-color);
   color: var(--ion-text-color);
-  animation: landing-float 7s ease-in-out infinite;
 }
 
 .landing-phone__notch {
@@ -733,7 +738,8 @@
 
 @keyframes landing-float {
   50% {
-    transform: translateY(-12px) rotate(0.5deg);
+    translate: 0 -14px;
+    rotate: 0.6deg;
   }
 }
 
@@ -812,13 +818,13 @@
   .landing-hero::before,
   .landing-hero::after,
   .landing-hero__icon ion-icon,
-  .landing-phone__screen,
   .landing-phone__toast {
     animation: none;
   }
 
   .landing-word > span,
   .landing-rise,
+  .landing-phone,
   .landing-phone__row {
     animation: none;
     opacity: 1;
