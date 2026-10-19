@@ -11,6 +11,10 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import IdleSessionGuard from './components/IdleSessionGuard';
 import PushRegistrar from './components/PushRegistrar';
+// Aviso de privacidad y terminos (texto publico, enlazado desde el pie de la landing). NO es lazy a proposito: una ruta
+// lazy de primer nivel con LazyRoute asPage deja la pagina real en `ion-page-invisible` cuando se NAVEGA a ella (la
+// transicion corre sobre la pagina del spinner). Es corta, asi que pesa muy poco en el bundle.
+import Legal from './pages/Legal';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -33,6 +37,7 @@ import './theme/global.css';
 // La landing es solo web: lazy para que su codigo y su CSS no entren al bundle inicial del APK nativo.
 const Landing = lazy(() => import('./pages/Landing'));
 
+
 setupIonicReact();
 
 const AppRoutes: React.FC = () => {
@@ -52,6 +57,8 @@ const AppRoutes: React.FC = () => {
           path="/tabs/*"
           element={session ? <Tabs /> : <Navigate to="/login" replace />}
         />
+        <Route path="/privacidad" element={<Legal kind="privacidad" />} />
+        <Route path="/terminos" element={<Legal kind="terminos" />} />
         {/* La landing es solo web: la app nativa (APK) entra directo a login / home. */}
         <Route
           path="/"

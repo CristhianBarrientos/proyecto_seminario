@@ -1,0 +1,125 @@
+.legal-content {
+  --background: var(--ion-background-color);
+  /* El gris de apoyo del sistema (--ion-color-medium) da ~4.3:1 sobre el fondo claro, justo bajo el 4.5:1 de WCAG AA
+     para texto chico. Aca se mezcla un poco con el color de texto para pasar el minimo sin tocar el tema global. */
+  --legal-muted: color-mix(in srgb, var(--ion-color-medium) 70%, var(--ion-text-color));
+  /* El ambar de marca no da contraste como texto sobre fondo claro: los enlaces usan el texto con subrayado. */
+  --legal-link: var(--ion-text-color);
+}
+
+.legal-content a {
+  color: var(--legal-link);
+  text-decoration: underline;
+  text-decoration-color: var(--ion-color-secondary);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  font-weight: 700;
+}
+
+.legal-content a:hover {
+  text-decoration-color: var(--legal-link);
+}
+
+.legal-content a:focus-visible {
+  outline: 3px solid var(--ion-color-tertiary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.legal-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 64px;
+  box-sizing: border-box;
+  padding: 0 20px;
+  background: var(--ion-toolbar-background);
+  border-bottom: 1px solid var(--ion-border-color);
+}
+
+.legal-content .legal-brand {
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  color: var(--ion-text-color);
+  text-decoration: none;
+}
+
+.legal-content .legal-back {
+  color: var(--legal-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.legal-doc {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 20px 8px;
+  color: var(--ion-text-color);
+  line-height: 1.65;
+}
+
+.legal-doc h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.legal-doc__summary {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  color: var(--legal-muted);
+}
+
+.legal-doc__updated {
+  margin: 0 0 32px;
+  font-size: 0.85rem;
+  color: var(--legal-muted);
+}
+
+.legal-section {
+  padding: 22px 0;
+  border-top: 1px solid var(--ion-border-color);
+}
+
+.legal-section h2 {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.legal-section p {
+  margin: 0 0 10px;
+}
+
+.legal-section ul {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+
+.legal-section li {
+  margin-bottom: 8px;
+}
+
+.legal-section li::marker {
+  color: var(--ion-color-secondary);
+}
+
+.legal-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 760px;
+  margin: 24px auto 0;
+  padding: 24px 20px 32px;
+  border-top: 1px solid var(--ion-border-color);
+  font-size: 0.85rem;
+  color: var(--legal-muted);
+}

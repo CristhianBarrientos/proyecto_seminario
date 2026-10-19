@@ -41,6 +41,7 @@
   color: var(--ion-color-medium);
   font-size: 0.9rem;
   font-weight: 600;
+  transition: color 0.15s ease;
 }
 
 .landing-nav__links a:hover {
@@ -57,15 +58,22 @@
   background: var(--ion-color-secondary);
   color: var(--ion-color-secondary-contrast);
   font-family: inherit;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 1rem;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 6px 16px -6px rgba(var(--ion-color-secondary-rgb), 0.7);
+  transition: background-color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.5, 0.64, 1), box-shadow 0.25s ease;
 }
 
 .landing-btn:hover {
   background: var(--ion-color-secondary-shade);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px -8px rgba(var(--ion-color-secondary-rgb), 0.8);
+}
+
+.landing-btn:active {
+  transform: translateY(0);
 }
 
 .landing-btn:focus-visible,
@@ -78,69 +86,354 @@
 .landing-btn--small {
   padding: 8px 16px;
   font-size: 0.9rem;
+  box-shadow: none;
+}
+
+.landing-btn--small:hover {
+  box-shadow: none;
 }
 
 .landing-btn--ghost {
   background: transparent;
   color: #fff;
   border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: none;
 }
 
 .landing-btn--ghost:hover {
   background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
 }
 
 .landing-btn--disabled {
   background: var(--ion-border-color);
   color: var(--ion-color-medium);
   cursor: default;
+  box-shadow: none;
 }
 
 .landing-btn--disabled:hover {
   background: var(--ion-border-color);
+  transform: none;
+  box-shadow: none;
 }
 
-/* --- Hero --- */
+/* --- Hero: el mismo panel slate del login, con el martillo de marca --- */
 .landing-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 18px 16px 0;
+  border-radius: var(--app-radius-lg);
   background: var(--app-hero-gradient);
+  background-size: 200% 200%;
   color: #fff;
-  padding: 72px 20px 80px;
+  padding: 64px 20px 72px;
+  box-shadow: var(--app-shadow-md);
+  animation: landing-gradient 16s ease-in-out infinite;
+}
+
+/* Dos luces difusas (ambar y teal) que derivan por detras del contenido. */
+.landing-hero::before,
+.landing-hero::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.landing-hero::before {
+  width: 340px;
+  height: 340px;
+  right: -60px;
+  top: -80px;
+  background: rgba(var(--ion-color-secondary-rgb), 0.32);
+  animation: landing-drift 14s ease-in-out infinite;
+}
+
+.landing-hero::after {
+  width: 300px;
+  height: 300px;
+  left: -80px;
+  bottom: -120px;
+  background: rgba(var(--ion-color-tertiary-rgb), 0.3);
+  animation: landing-drift 18s ease-in-out infinite reverse;
 }
 
 .landing-hero__inner {
-  max-width: 760px;
+  position: relative;
+  z-index: 1;
+  max-width: 1040px;
   margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.landing-hero__icon {
+  /* .app-hero-icon (global) da el recuadro; aca solo el balanceo del martillo cada pocos segundos. */
+  margin-bottom: 20px;
+}
+
+.landing-hero__icon ion-icon {
+  transform-origin: 20% 85%;
+  animation: landing-swing 4.2s ease-in-out infinite;
 }
 
 .landing-eyebrow {
   margin: 0 0 12px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #F4B155;
+  color: var(--ion-color-secondary);
 }
 
 .landing-hero h1 {
   margin: 0 0 18px;
-  font-size: clamp(2rem, 6vw, 3.2rem);
-  line-height: 1.12;
+  font-size: clamp(2.3rem, 5vw, 3.7rem);
+  line-height: 1.06;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+}
+
+/* Cada palabra sube desde una mascara; el retraso sale de --i. */
+.landing-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  /* Holgura para descendentes y tildes (la caja de la fuente sobrepasa el line-height de 1.06); el margen
+     negativo compensa el padding y el layout no se mueve. */
+  padding: 0.12em 0 0.16em;
+  margin: -0.12em 0 -0.08em;
+}
+
+.landing-word > span {
+  display: inline-block;
+  animation: landing-word-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i) * 70ms + 150ms);
+}
+
+.landing-word__hl {
+  color: var(--ion-color-secondary);
 }
 
 .landing-hero__lead {
   margin: 0 0 32px;
   font-size: 1.1rem;
   line-height: 1.55;
-  opacity: 0.9;
-  max-width: 600px;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 560px;
 }
 
 .landing-hero__cta {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+/* Entrada escalonada de los bloques del hero. */
+.landing-rise {
+  animation: landing-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--d, 0) * 90ms + 100ms);
+}
+
+/* --- Maqueta de la app (decorativa) --- */
+.landing-phone {
+  position: relative;
+  justify-self: center;
+  width: min(292px, 100%);
+  padding: 10px;
+  border-radius: 40px;
+  background: #0d1014;
+  box-shadow: 0 44px 70px -30px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  /* Se mueve el telefono ENTERO (marco, pantalla y aviso). La entrada anima `transform` y el flotado anima
+     `translate`/`rotate` (propiedades independientes), asi que conviven en el mismo `animation`. */
+  animation:
+    landing-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards,
+    landing-float 7s ease-in-out infinite;
+  animation-delay: calc(var(--d, 0) * 90ms + 100ms), 0s;
+}
+
+.landing-phone__screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 530px;
+  overflow: hidden;
+  border-radius: 31px;
+  background: var(--ion-background-color);
+  color: var(--ion-text-color);
+}
+
+.landing-phone__notch {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 86px;
+  height: 22px;
+  border-radius: 99px;
+  background: #0d1014;
+  z-index: 3;
+}
+
+.landing-phone__top {
+  padding: 42px 16px 16px;
+  border-radius: 0 0 22px 22px;
+  background: var(--app-hero-gradient);
+  color: #fff;
+}
+
+.landing-phone__logo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 10px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--ion-color-secondary);
+}
+
+.landing-phone__top strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+}
+
+.landing-phone__chips {
+  display: flex;
+  gap: 6px;
+  overflow: hidden;
+  /* La fila no cabe entera: el borde derecho se desvanece para que el corte se lea como "hay mas" y no como un chip roto. */
+  -webkit-mask-image: linear-gradient(to right, #000 78%, transparent);
+  mask-image: linear-gradient(to right, #000 78%, transparent);
+}
+
+.landing-phone__chips span {
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.62rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.landing-phone__chips span.is-on {
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+}
+
+.landing-phone__list {
+  display: grid;
+  flex: 1;
+  gap: 9px;
+  align-content: start;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.landing-phone__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--ion-border-color);
+  border-radius: 12px;
+  background: var(--app-surface);
+  animation: landing-row-in 0.6s cubic-bezier(0.2, 0.9, 0.2, 1) backwards, landing-row-hl 8s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.35s + 0.9s), calc(var(--i) * 2s + 2s);
+}
+
+.landing-phone__avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.landing-phone__row b {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.landing-phone__row small {
+  color: var(--ion-color-medium);
+  font-size: 0.66rem;
+}
+
+.landing-phone__row small i {
+  font-style: normal;
+  color: var(--ion-color-secondary);
+}
+
+.landing-phone__go {
+  margin-left: auto;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.landing-phone__tabs {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0 14px;
+  border-top: 1px solid var(--ion-border-color);
+  background: var(--app-surface);
+  color: var(--ion-color-medium);
+  font-size: 1.25rem;
+}
+
+.landing-phone__tabs .is-on {
+  color: var(--ion-color-secondary);
+}
+
+.landing-phone__toast {
+  position: absolute;
+  left: -58px;
+  bottom: 110px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--ion-border-color);
+  border-radius: 14px;
+  background: var(--app-surface);
+  color: var(--ion-text-color);
+  box-shadow: var(--app-shadow-md);
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0;
+  animation: landing-toast 7s ease-in-out 3.4s infinite;
+}
+
+.landing-phone__toast::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ion-color-tertiary);
+  box-shadow: 0 0 0 4px rgba(var(--ion-color-tertiary-rgb), 0.18);
+}
+
+.landing-phone__toast small {
+  display: block;
+  color: var(--ion-color-medium);
+  font-size: 0.68rem;
+  font-weight: 500;
 }
 
 /* --- Secciones --- */
@@ -152,9 +445,21 @@
 
 .landing-section h2 {
   margin: 0 0 24px;
-  font-size: 1.6rem;
+  font-size: clamp(1.7rem, 3.2vw, 2.2rem);
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+}
+
+/* Bloques con data-reveal: aparecen al entrar en pantalla (useReveal en Landing.tsx). */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
 }
 
 .landing-chips {
@@ -166,13 +471,51 @@
   gap: 10px;
 }
 
+/* La lista entera no se anima: lo hace cada chip, con retraso segun su posicion. */
+.landing-chips[data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+
+.landing-chips[data-reveal] .landing-chip {
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+}
+
+.landing-chips[data-reveal].is-in .landing-chip {
+  opacity: 1;
+  transform: none;
+}
+
 .landing-chip {
   padding: 8px 16px;
   border-radius: 999px;
   background: var(--app-surface);
   border: 1px solid var(--ion-border-color);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
+  cursor: default;
+  transition: opacity 0.7s ease, transform 0.35s cubic-bezier(0.34, 1.5, 0.64, 1), background-color 0.2s ease,
+    border-color 0.2s ease, color 0.2s ease;
+  transition-delay: calc(var(--i, 0) * 70ms), 0s, 0s, 0s, 0s;
+}
+
+/* "Otros": no es un oficio cargado sino la senal de que hay mas; borde punteado y sin relleno. */
+.landing-chip--more {
+  background: transparent;
+  border-style: dashed;
+}
+
+.landing-chip:hover {
+  transform: translateY(-3px);
+  background: var(--ion-color-secondary);
+  border-color: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+}
+
+/* Durante el revelado `.is-in` fija transform:none con mas especificidad: se repite el hover para que responda de inmediato. */
+.landing-chips[data-reveal].is-in .landing-chip:hover {
+  transform: translateY(-3px);
 }
 
 .landing-steps {
@@ -184,12 +527,39 @@
   gap: 16px;
 }
 
+.landing-steps[data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+
+.landing-steps[data-reveal] .landing-step {
+  opacity: 0;
+  transform: translateY(22px);
+}
+
+.landing-steps[data-reveal].is-in .landing-step {
+  opacity: 1;
+  transform: none;
+}
+
 .landing-step {
   background: var(--app-surface);
   border: 1px solid var(--ion-border-color);
   border-radius: var(--app-radius-md);
   padding: 22px;
   box-shadow: var(--app-shadow-sm);
+  transition: opacity 0.8s ease, transform 0.4s cubic-bezier(0.34, 1.5, 0.64, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+  transition-delay: calc(var(--i, 0) * 110ms), 0s, 0s, 0s;
+}
+
+.landing-step:hover {
+  transform: translateY(-4px);
+  border-color: var(--ion-color-secondary);
+  box-shadow: var(--app-shadow-md);
+}
+
+.landing-steps[data-reveal].is-in .landing-step:hover {
+  transform: translateY(-4px);
 }
 
 .landing-step__num {
@@ -203,6 +573,11 @@
   color: var(--ion-color-secondary-contrast);
   font-weight: 800;
   margin-bottom: 12px;
+  transition: transform 0.4s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+.landing-step:hover .landing-step__num {
+  transform: rotate(-10deg) scale(1.1);
 }
 
 .landing-step h3 {
@@ -216,7 +591,7 @@
   color: var(--ion-color-medium);
 }
 
-/* --- Profesionales --- */
+/* --- Profesionales: el mismo panel slate que el hero --- */
 .landing-pro {
   display: flex;
   flex-wrap: wrap;
@@ -224,10 +599,10 @@
   justify-content: space-between;
   gap: 20px;
   margin-top: 56px;
-  padding: 32px 28px;
+  padding: 36px 32px;
   max-width: 920px;
-  background: var(--app-surface);
-  border: 1px solid var(--ion-border-color);
+  background: var(--app-hero-gradient);
+  color: #fff;
   border-radius: var(--app-radius-lg);
   box-shadow: var(--app-shadow-md);
 }
@@ -240,7 +615,7 @@
   margin: 0;
   max-width: 520px;
   line-height: 1.55;
-  color: var(--ion-color-medium);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 /* --- Descarga --- */
@@ -249,6 +624,15 @@
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
   align-items: start;
+}
+
+.landing-download__main {
+  padding: 26px;
+  background: var(--app-surface);
+  border: 1px solid var(--ion-border-color);
+  border-top: 4px solid var(--ion-color-tertiary);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
 }
 
 .landing-meta {
@@ -262,20 +646,58 @@
   font-size: 0.78rem;
 }
 
+/* Pasos de instalacion como campos del login: borde fino que se vuelve ambar al pasar el mouse. */
 .landing-install {
+  display: grid;
+  gap: 12px;
   margin: 0;
-  padding-left: 20px;
+  padding: 0;
+  list-style: none;
+  counter-reset: install;
   line-height: 1.55;
   color: var(--ion-color-medium);
 }
 
-.landing-install li + li {
-  margin-top: 8px;
+.landing-install li {
+  position: relative;
+  counter-increment: install;
+  padding: 14px 16px 14px 58px;
+  background: var(--app-surface);
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--app-radius-sm);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+.landing-install li::before {
+  content: counter(install);
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.landing-install li:hover {
+  border-color: var(--ion-color-secondary);
+  box-shadow: 0 0 0 3px rgba(var(--ion-color-secondary-rgb), 0.22);
+  transform: translateX(4px);
 }
 
 /* --- Footer --- */
 .landing-footer {
+  /* El gris de apoyo del sistema da ~4.3:1 sobre el fondo claro (bajo el 4.5:1 de WCAG AA); en el pie hay enlaces
+     legales y conviene que se lean bien. Se mezcla un poco con el color de texto, sin tocar el tema global. */
+  --footer-muted: color-mix(in srgb, var(--ion-color-medium) 70%, var(--ion-text-color));
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   max-width: 960px;
@@ -283,12 +705,226 @@
   padding: 24px 20px 32px;
   border-top: 1px solid var(--ion-border-color);
   font-size: 0.85rem;
-  color: var(--ion-color-medium);
+  color: var(--footer-muted);
 }
 
 .landing-footer a {
-  color: var(--ion-color-medium);
+  color: var(--footer-muted);
   font-weight: 600;
+}
+
+.landing-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+/* --- Preguntas frecuentes (details/summary nativo: accesible por teclado y sin JS) --- */
+.landing-faq {
+  display: grid;
+  gap: 12px;
+}
+
+.landing-faq__item {
+  background: var(--app-surface);
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.landing-faq__item:hover,
+.landing-faq__item[open] {
+  border-color: var(--ion-color-secondary);
+}
+
+.landing-faq__item[open] {
+  box-shadow: var(--app-shadow-md);
+}
+
+.landing-faq__item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  list-style: none;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+
+.landing-faq__item summary::-webkit-details-marker {
+  display: none;
+}
+
+.landing-faq__item summary::after {
+  content: '+';
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.landing-faq__item[open] summary::after {
+  content: '−';
+}
+
+.landing-faq__item summary:focus-visible {
+  outline: 3px solid var(--ion-color-tertiary);
+  outline-offset: 2px;
+  border-radius: var(--app-radius-md);
+}
+
+.landing-faq__item p {
+  margin: 0;
+  padding: 0 22px 14px;
+  color: var(--ion-color-medium);
+  line-height: 1.6;
+}
+
+/* Sin enlace ni boton, el parrafo cierra la tarjeta; con ellos, cierra el contenedor `__extra`. */
+.landing-faq__item > p:last-child,
+.landing-faq__extra {
+  padding-bottom: 18px;
+}
+
+.landing-faq__extra {
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+/* El ambar de marca no alcanza contraste como texto sobre fondo claro (2:1): el enlace va en el color de texto y el
+   ambar queda en el subrayado. */
+.landing-faq__item a {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--ion-text-color);
+  text-decoration: underline;
+  text-decoration-color: var(--ion-color-secondary);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.landing-faq__item[open] > :not(summary) {
+  animation: landing-faq-in 0.3s ease;
+}
+
+/* --- Animaciones --- */
+@keyframes landing-faq-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes landing-gradient {
+  50% {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes landing-drift {
+  50% {
+    transform: translate(50px, 30px) scale(1.15);
+  }
+}
+
+@keyframes landing-swing {
+  0%,
+  55%,
+  100% {
+    rotate: 0deg;
+  }
+  65% {
+    rotate: -26deg;
+  }
+  75% {
+    rotate: 14deg;
+  }
+  85% {
+    rotate: -7deg;
+  }
+}
+
+@keyframes landing-word-in {
+  from {
+    transform: translateY(110%);
+  }
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes landing-float {
+  50% {
+    translate: 0 -14px;
+    rotate: 0.6deg;
+  }
+}
+
+@keyframes landing-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* Resalta una fila a la vez (cada una con su desfase) para sugerir que la lista esta viva. */
+@keyframes landing-row-hl {
+  0%,
+  22%,
+  100% {
+    border-color: var(--ion-border-color);
+    box-shadow: none;
+  }
+  8%,
+  14% {
+    border-color: var(--ion-color-secondary);
+    box-shadow: 0 0 0 3px rgba(var(--ion-color-secondary-rgb), 0.24);
+  }
+}
+
+@keyframes landing-toast {
+  0% {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.9);
+  }
+  8%,
+  45% {
+    opacity: 1;
+    transform: none;
+  }
+  55%,
+  100% {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.9);
+  }
+}
+
+@media (max-width: 860px) {
+  .landing-hero__inner {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .landing-phone__toast {
+    left: -6px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -297,7 +933,7 @@
   }
 
   .landing-hero {
-    padding: 48px 20px 56px;
+    padding: 44px 16px 52px;
   }
 
   .landing-pro {
@@ -306,12 +942,50 @@
   }
 }
 
+/* Hero fuera de pantalla (usePauseHeroOffscreen): se pausan sus animaciones infinitas para no repintar capas grandes
+   y difuminadas mientras no se ven (ahorra bateria en celulares modestos). */
+.landing-hero[data-offscreen],
+.landing-hero[data-offscreen]::before,
+.landing-hero[data-offscreen]::after,
+.landing-hero[data-offscreen] * {
+  animation-play-state: paused;
+}
+
+/* Sin movimiento: todo visible y quieto (los bloques con data-reveal ya se muestran por useReveal). */
 @media (prefers-reduced-motion: reduce) {
   .landing-content {
     scroll-behavior: auto;
   }
 
-  .landing-btn {
+  .landing-hero,
+  .landing-hero::before,
+  .landing-hero::after,
+  .landing-hero__icon ion-icon,
+  .landing-phone__toast {
+    animation: none;
+  }
+
+  .landing-faq__item[open] > :not(summary) {
+    animation: none;
+  }
+
+  .landing-word > span,
+  .landing-rise,
+  .landing-phone,
+  .landing-phone__row {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .landing-phone__toast {
+    display: none;
+  }
+
+  .landing-btn,
+  .landing-chip,
+  .landing-step,
+  .landing-install li {
     transition: none;
   }
 }
@@ -321,4 +995,76 @@
 .landing-hero,
 .landing-section {
   scroll-margin-top: calc(var(--landing-nav-h) + 8px);
+}
+
+/* --- Ventana: paso a paso de instalacion (ion-modal vive fuera de .landing-content, por eso las variables van aca) --- */
+.landing-install-modal {
+  --width: min(560px, 94vw);
+  --height: min(680px, 90vh);
+  --border-radius: var(--app-radius-lg);
+  --landing-muted: color-mix(in srgb, var(--ion-color-medium) 70%, var(--ion-text-color));
+}
+
+.landing-install-guide {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-install-guide li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  padding: 16px;
+  background: var(--app-surface);
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--app-radius-md);
+}
+
+.landing-install-guide__num {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+  font-weight: 800;
+}
+
+.landing-install-guide h3 {
+  margin: 0 0 4px;
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+
+.landing-install-guide p {
+  margin: 0 0 10px;
+  color: var(--landing-muted);
+  line-height: 1.55;
+}
+
+.landing-install-guide li > div > :last-child {
+  margin-bottom: 0;
+}
+
+.landing-install-guide a.landing-btn {
+  text-decoration: none;
+}
+
+.landing-install-guide__note {
+  margin: 16px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--landing-muted);
+}
+
+.landing-install-guide__note code {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  word-break: break-all;
+  color: var(--ion-text-color);
 }
