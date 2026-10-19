@@ -1,0 +1,140 @@
+/* Reseñas: formulario del cliente (ReviewForm), lista (ProfessionalReviews) y "Mi reputación" (ReputationCard). */
+
+.review-box,
+.review-list-wrap,
+.reputation-card {
+  /* El gris de apoyo del tema da ~4.3:1 sobre fondo claro (bajo el 4.5:1 de WCAG AA); se mezcla con el texto. */
+  --review-muted: color-mix(in srgb, var(--ion-color-medium) 70%, var(--ion-text-color));
+}
+
+/* --- Reseña del cliente sobre un trabajo (dentro de la tarjeta de la solicitud) --- */
+.review-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--app-radius-md);
+  background: var(--ion-background-color);
+}
+
+.review-box__title {
+  margin: 0;
+  font-weight: 800;
+}
+
+.review-box__edited {
+  font-weight: 600;
+  font-size: 0.85em;
+  color: var(--review-muted);
+}
+
+.review-box__comment {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.review-box__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--review-muted);
+}
+
+.review-box__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* --- Lista de reseñas de un profesional --- */
+/* Mismo margen lateral que el resto de las secciones del perfil (ver .pro-detail-services). */
+.review-list-wrap {
+  padding: 0 16px 8px;
+}
+
+.review-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.review-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.review-item__who {
+  font-weight: 800;
+}
+
+.review-item__mine {
+  font-size: 0.75rem;
+}
+
+.review-item__meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--review-muted);
+}
+
+.review-item__comment {
+  margin: 4px 0 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.review-list__msg {
+  margin: 8px 0;
+}
+
+.review-list__empty {
+  color: var(--review-muted);
+}
+
+/* --- Mi reputación --- */
+.reputation-card {
+  display: grid;
+  gap: 10px;
+  margin: 0 16px 8px;
+  padding: 14px;
+}
+
+.reputation-card__score {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.reputation-card__value {
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.reputation-card__count {
+  margin: 2px 0 0;
+  font-weight: 700;
+}
+
+.reputation-card__note {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--review-muted);
+}

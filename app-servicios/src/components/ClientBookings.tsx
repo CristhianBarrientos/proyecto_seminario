@@ -3,9 +3,11 @@ import { hourglassOutline, closeCircleOutline } from 'ionicons/icons';
 import { useBookingsList } from '../lib/useBookingsList';
 import { useBookingsView, isHideable } from '../lib/useBookingsView';
 import { useUnreadChatIds, useRequestedChat } from '../lib/useChatDeepLink';
+import { useMyReviews } from '../lib/useMyReviews';
 import BookingCard from './BookingCard';
 import BookingsToolbar from './BookingsToolbar';
 import ReportButton from './ReportButton';
+import ReviewForm from './ReviewForm';
 import './Bookings.css';
 
 interface Props {
@@ -18,6 +20,7 @@ interface Props {
 const ClientBookings: React.FC<Props> = ({ userId, openChatBookingId, onChatHandled }) => {
   const { bookings, loading, error, pendingIds, updateStatus, hideBookings } = useBookingsList(userId, 'client_id');
   const view = useBookingsView(bookings, hideBookings);
+  const { reviewByBooking, loaded: reviewsLoaded, error: reviewError, submitReview, updateReview, deleteReview } = useMyReviews(userId, bookings);
   const unreadChatIds = useUnreadChatIds();
   useRequestedChat(openChatBookingId, bookings, loading, view.revealBooking, onChatHandled);
 
@@ -31,7 +34,7 @@ const ClientBookings: React.FC<Props> = ({ userId, openChatBookingId, onChatHand
 
   return (
     <div className="bookings-list">
-      {error && <IonText color="danger"><p className="ion-padding-horizontal">{error}</p></IonText>}
+      {(error || reviewError) && <IonText color="danger"><p className="ion-padding-horizontal">{error || reviewError}</p></IonText>}
 
       {bookings.length === 0 && (
         <div className="app-empty">
@@ -83,6 +86,15 @@ const ClientBookings: React.FC<Props> = ({ userId, openChatBookingId, onChatHand
               <IonIcon icon={closeCircleOutline} slot="start" />
               Cancelar solicitud
             </IonButton>
+          )}
+          {b.status === 'completado' && reviewsLoaded && (
+            <ReviewForm
+              existing={reviewByBooking.get(b.id)}
+              professionalName={b.otherPartyName}
+              onSubmit={(rating, comment) => submitReview(b, rating, comment)}
+              onUpdate={updateReview}
+              onDelete={deleteReview}
+            />
           )}
           <ReportButton
             reporterId={userId}

@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
+import ReputationCard from '../components/ReputationCard';
 import './Profile.css';
 
 interface ProfileData {
@@ -80,6 +81,13 @@ const Profile: React.FC = () => {
             )}
           </div>
         </div>
+
+        {user && profile?.role && (
+          <>
+            <p className="app-section-label">Mi reputación</p>
+            <ReputationCard userId={user.id} role={profile.role} />
+          </>
+        )}
 
         <p className="app-section-label">Preferencias</p>
         <div className="app-card profile-row">
