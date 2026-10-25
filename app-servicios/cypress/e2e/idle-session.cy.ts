@@ -4,7 +4,7 @@
 const MIN = 60 * 1000;
 
 describe('Cierre de sesión por inactividad', () => {
-  const password = 'Test1234';
+  const password = 'Test1234!';
   const email = `e2e-idle-${Date.now()}@test.local`;
 
   before(() => {

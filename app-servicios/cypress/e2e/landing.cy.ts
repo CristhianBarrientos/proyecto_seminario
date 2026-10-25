@@ -41,18 +41,15 @@ describe('Landing', () => {
       cy.contains('a.landing-btn', 'Crear mi perfil profesional').click({ scrollBehavior: 'center' });
       cy.location('pathname').should('eq', '/login');
       cy.location('search').should('eq', '?modo=registro&rol=profesional');
-      // Modo registro (boton "Registrarme") y rol preseleccionado. `value` de ion-select es una propiedad
-      // que React fija, no un atributo HTML.
-      cy.contains('ion-button', 'Registrarme').should('exist');
-      cy.get('ion-select').first().should(($el) => {
-        expect(($el[0] as unknown as { value: string }).value).to.eq('profesional');
-      });
+      // Modo registro (paso 1 de 3) y rol preseleccionado (la tarjeta del rol queda con aria-checked).
+      cy.contains('Paso 1 de 3').should('exist');
+      cy.get('.role-card[aria-checked="true"]').should('contain.text', 'Profesional');
     });
 
     it('/login sin parámetros sigue abriendo el inicio de sesión', () => {
       cy.visit('/login');
       cy.contains('ion-button', 'Entrar').should('exist');
-      cy.contains('ion-button', 'Registrarme').should('not.exist');
+      cy.contains('Paso 1 de 3').should('not.exist');
     });
 
     it('si Login ya estaba abierto, el enlace de la landing igual abre el alta como profesional', () => {
@@ -67,27 +64,23 @@ describe('Landing', () => {
       cy.contains('a.landing-btn', 'Crear mi perfil profesional').click({ scrollBehavior: 'center' });
 
       cy.location('search').should('eq', '?modo=registro&rol=profesional');
-      cy.contains('ion-button', 'Registrarme').should('exist');
-      cy.get('ion-select').first().should(($el) => {
-        expect(($el[0] as unknown as { value: string }).value).to.eq('profesional');
-      });
+      cy.contains('Paso 1 de 3').should('exist');
+      cy.get('.role-card[aria-checked="true"]').should('contain.text', 'Profesional');
     });
 
     it('si el usuario cambió el formulario a mano, el mismo enlace de la landing lo vuelve a dejar en el alta', () => {
       // Los parametros de la URL quedan identicos entre la primera y la segunda vez, asi que no basta con
       // reaccionar a un cambio de URL: hay que reiniciar el formulario cada vez que Login vuelve a ser activo.
       cy.contains('a.landing-btn', 'Crear mi perfil profesional').click({ scrollBehavior: 'center' });
-      cy.contains('ion-button', 'Registrarme').should('exist');
+      cy.contains('Paso 1 de 3').should('exist');
       cy.contains('ion-segment-button', 'Iniciar sesión').click(); // pasa a login a mano; la URL no cambia
       cy.contains('ion-button', 'Entrar').should('exist');
 
       cy.go('back');
       cy.location('pathname').should('eq', '/');
       cy.contains('a.landing-btn', 'Crear mi perfil profesional').click({ scrollBehavior: 'center' });
-      cy.contains('ion-button', 'Registrarme').should('exist');
-      cy.get('ion-select').first().should(($el) => {
-        expect(($el[0] as unknown as { value: string }).value).to.eq('profesional');
-      });
+      cy.contains('Paso 1 de 3').should('exist');
+      cy.get('.role-card[aria-checked="true"]').should('contain.text', 'Profesional');
     });
 
     it('los enlaces de la barra dejan el título de la sección visible, no tapado por la barra sticky', () => {
@@ -149,7 +142,7 @@ describe('Landing', () => {
   });
 
   describe('con sesión', () => {
-    const password = 'Test1234';
+    const password = 'Test1234!';
     const email = `e2e-landing-${Date.now()}@test.local`;
 
     before(() => {
