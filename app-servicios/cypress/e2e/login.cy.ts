@@ -1,5 +1,5 @@
 describe('Login', () => {
-  const password = 'Test1234';
+  const password = 'Test1234!';
   const email = `e2e-login-${Date.now()}@test.local`;
 
   before(() => {

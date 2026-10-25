@@ -29,8 +29,13 @@ export function getFriendlyErrorMessage(error: unknown): string {
   if (rawMessage.includes('email not confirmed')) {
     return 'Tu correo todavía no ha sido confirmado. Revisá tu bandeja de entrada.';
   }
-  if (rawMessage.includes('password') && (rawMessage.includes('6') || rawMessage.includes('short') || rawMessage.includes('weak'))) {
-    return 'La contraseña debe tener al menos 6 caracteres.';
+  // El servidor (GoTrue) rechaza contraseñas que no cumplen la política: error_code 'weak_password' (422). Debe ir
+  // antes del caso genérico de abajo, cuyo texto hablaba de "6 caracteres" y ya no es la regla.
+  if (code === 'weak_password' || rawMessage.includes('password should') || rawMessage.includes('weak')) {
+    return 'La contraseña no cumple los requisitos: 8 caracteres o más, una mayúscula, un número y un carácter especial.';
+  }
+  if (rawMessage.includes('password') && (rawMessage.includes('6') || rawMessage.includes('short'))) {
+    return 'La contraseña es demasiado corta.';
   }
   if (rawMessage.includes('invalid') && rawMessage.includes('email')) {
     return 'El correo ingresado no es válido.';

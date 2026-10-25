@@ -7,7 +7,7 @@
 // Cada caso es independiente: el primero parte de "sin reseña" (la borra si quedó una de una corrida anterior) y
 // los demás la crean ellos mismos con una inserción idempotente, así que se pueden correr solos (--spec, it.only).
 
-const password = 'Test1234';
+const password = 'Test1234!';
 const stamp = Date.now();
 const clientEmail = `e2e-reviews-client-${stamp}@test.local`;
 const proEmail = `e2e-reviews-pro-${stamp}@test.local`;

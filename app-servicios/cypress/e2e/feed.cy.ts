@@ -23,7 +23,7 @@ const scrollToCard = (name: string) => {
 };
 
 describe('Feed de servicios', () => {
-  const password = 'Test1234';
+  const password = 'Test1234!';
   const email = `e2e-feed-${Date.now()}@test.local`;
 
   before(() => {

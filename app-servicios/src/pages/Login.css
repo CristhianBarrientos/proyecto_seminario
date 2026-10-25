@@ -1,5 +1,7 @@
 .login-content {
   --background: var(--ion-background-color);
+  /* El gris de apoyo del tema da ~4.3:1 sobre fondo claro (bajo el 4.5:1 de WCAG AA); se mezcla con el texto. */
+  --login-muted: color-mix(in srgb, var(--ion-color-medium) 70%, var(--ion-text-color));
 }
 
 .login-content::part(scroll) {
@@ -7,30 +9,319 @@
   flex-direction: column;
 }
 
-.login-hero {
-  margin: 24px 16px 0;
-  border-radius: 0 0 var(--app-radius-lg) var(--app-radius-lg);
-  margin-top: 0;
+/* --- Hero a todo el ancho con olas: la tarjeta del formulario se monta encima --- */
+/* `.login-hero.app-hero` (no solo `.login-hero`): el tema global define `.app-hero` con padding y radio propios y se carga
+   DESPUES de esta hoja, asi que con la misma especificidad ganaria el global. */
+.login-hero.app-hero {
+  /* `scroll` es un contenedor flex: sin esto, el overflow:hidden permite que Flex encoja el hero y aplaste el contenido. */
+  flex: none;
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  padding: 48px 20px 112px;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-size: 200% 200%;
+  animation: login-gradient 16s ease-in-out infinite;
+}
+
+/* Dos luces difusas (ambar y teal) que derivan por detras del contenido. */
+.login-hero::before,
+.login-hero::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(55px);
+  pointer-events: none;
+}
+
+.login-hero::before {
+  width: 260px;
+  height: 260px;
+  right: -60px;
+  top: -90px;
+  background: rgba(var(--ion-color-secondary-rgb), 0.32);
+  animation: login-drift 14s ease-in-out infinite;
+}
+
+.login-hero::after {
+  width: 240px;
+  height: 240px;
+  left: -70px;
+  bottom: -110px;
+  background: rgba(var(--ion-color-tertiary-rgb), 0.3);
+  animation: login-drift 18s ease-in-out infinite reverse;
+}
+
+.login-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.login-hero .app-hero-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 0 14px;
+  border-radius: 18px;
+}
+
+.login-hero__icon ion-icon {
+  transform-origin: 20% 85%;
+  animation: login-swing 4.2s ease-in-out infinite;
 }
 
 .login-hero__title {
   margin: 0 0 6px;
-  font-size: 1.5rem;
+  font-size: 1.9rem;
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .login-hero__subtitle {
-  margin: 0;
+  margin: 0 auto;
   font-size: 0.9rem;
   opacity: 0.85;
-  max-width: 320px;
+  max-width: 330px;
+  line-height: 1.5;
 }
 
-.login-form {
-  padding: 24px 16px 16px;
+.login-hero__wave {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  z-index: 2;
+  width: 200%;
+  height: 46px;
+  pointer-events: none;
 }
 
-.login-form ion-segment {
+.login-hero__wave path {
+  fill: var(--ion-background-color);
+}
+
+.login-hero__wave--back {
+  height: 56px;
+  opacity: 0.5;
+  animation: login-wave 18s linear infinite reverse;
+}
+
+.login-hero__wave--front {
+  animation: login-wave 12s linear infinite;
+}
+
+/* --- Tarjeta flotante --- */
+.login-card {
+  flex: none;
+  position: relative;
+  z-index: 3;
+  width: calc(100% - 32px);
+  max-width: 440px;
+  margin: -84px auto 24px;
+  padding: 22px;
+  background: var(--app-surface);
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-md);
+}
+
+.login-card ion-segment {
   margin-bottom: 20px;
+}
+
+/* --- Progreso del registro --- */
+.login-progress {
+  margin-bottom: 18px;
+}
+
+.login-progress__row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--login-muted);
+}
+
+.login-progress__row b {
+  color: var(--ion-text-color);
+}
+
+.login-progress__bar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--ion-border-color);
+  overflow: hidden;
+}
+
+.login-progress__bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--ion-color-secondary);
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.login-step {
+  animation: login-step-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* --- Tarjetas Cliente / Profesional --- */
+.role-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.role-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border: 1.5px solid var(--ion-border-color);
+  border-radius: 14px;
+  background: var(--app-surface);
+  color: var(--ion-text-color);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+.role-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--ion-color-secondary) 60%, var(--ion-border-color));
+}
+
+.role-card:focus-visible {
+  outline: 3px solid var(--ion-color-tertiary);
+  outline-offset: 2px;
+}
+
+.role-card__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--ion-background-color);
+  color: var(--login-muted);
+  font-size: 1.2rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.role-card b {
+  font-size: 0.95rem;
+}
+
+.role-card small {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--login-muted);
+}
+
+.role-card__tick {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+  font-size: 0.8rem;
+  transform: scale(0);
+  transition: transform 0.35s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+.role-card--on {
+  border-color: var(--ion-color-secondary);
+  box-shadow: 0 0 0 3px rgba(var(--ion-color-secondary-rgb), 0.22);
+}
+
+.role-card--on .role-card__icon {
+  background: var(--ion-color-secondary);
+  color: var(--ion-color-secondary-contrast);
+}
+
+.role-card--on .role-card__tick {
+  transform: scale(1);
+}
+
+/* --- Acciones --- */
+.login-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.login-cta {
+  flex: 1;
+  margin: 0;
+}
+
+.login-back {
+  flex: none;
+  margin: 0;
+}
+
+.login-hidden-submit {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+@keyframes login-gradient {
+  50% { background-position: 100% 100%; }
+}
+
+@keyframes login-drift {
+  50% { transform: translate(40px, 26px) scale(1.15); }
+}
+
+@keyframes login-swing {
+  0%, 55%, 100% { rotate: 0deg; }
+  65% { rotate: -26deg; }
+  75% { rotate: 14deg; }
+  85% { rotate: -7deg; }
+}
+
+@keyframes login-wave {
+  to { transform: translateX(-50%); }
+}
+
+@keyframes login-step-in {
+  from { opacity: 0; transform: translateX(22px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-hero,
+  .login-hero::before,
+  .login-hero::after,
+  .login-hero__icon ion-icon,
+  .login-hero__wave,
+  .login-step {
+    animation: none;
+  }
+
+  .login-progress__bar i,
+  .role-card,
+  .role-card__icon,
+  .role-card__tick {
+    transition: none;
+  }
 }
