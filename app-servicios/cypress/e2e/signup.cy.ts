@@ -54,6 +54,22 @@ describe('Signup', () => {
     cy.get('input[type="text"]').first().should('have.value', 'Usuario De Prueba');
   });
 
+  it('si el correo ya existe, vuelve al paso del correo con el aviso', () => {
+    const email = `e2e-signup-repetido-${Date.now()}@test.local`;
+    cy.apiSignup(email, 'Test1234!', 'Cuenta Previa', 'cliente');
+
+    cy.get('input[type="text"]').first().type('Usuario De Prueba');
+    next();
+    cy.get('input[type="email"]').type(email);
+    next();
+    cy.get('input[type="password"]').type('Test1234!');
+    cy.contains('ion-button', 'Crear mi cuenta').click();
+
+    cy.contains('Paso 2 de 3').should('be.visible');
+    cy.contains('Ya existe una cuenta con ese correo').should('be.visible');
+    cy.location('pathname').should('eq', '/login');
+  });
+
   it('crea la cuenta con datos válidos y redirige al feed', () => {
     const email = `e2e-signup-${Date.now()}@test.local`;
 

@@ -64,6 +64,16 @@ const Login: React.FC = () => {
 
   const signup = mode === 'signup';
 
+  // Evita un segundo envío mientras el primero sigue en curso: `loading` es estado de React y no se actualiza hasta
+  // el próximo render, así que dos eventos seguidos (Enter mantenido, doble toque) verían todavía `false`.
+  const submittingRef = useRef(false);
+  const runOnce = (action: () => Promise<void>) => {
+    submittingRef.current = true;
+    void action().finally(() => {
+      submittingRef.current = false;
+    });
+  };
+
   // Ionic mantiene Login montado en su pila de navegacion: los useState iniciales de arriba solo corren
   // la primera vez. Si ya se habia abierto /login y despues se llega desde la landing con
   // ?modo=registro&rol=profesional, el formulario seguia en "iniciar sesion" como cliente. Se sincroniza
@@ -155,6 +165,13 @@ const Login: React.FC = () => {
     setLoading(false);
 
     if (signUpError || !data.user) {
+      // Un correo ya registrado se detecta recién al enviar: se vuelve al paso del correo, que es donde se corrige.
+      const emailTaken = signUpError?.code === 'user_already_exists' || /already (registered|exists)/i.test(signUpError?.message ?? '');
+      if (emailTaken) {
+        setStep(1);
+        setTouched(false);
+        focusStep(1);
+      }
       setError(getFriendlyErrorMessage(signUpError ?? new Error('No se pudo crear la cuenta')));
       return;
     }
@@ -164,9 +181,9 @@ const Login: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || submittingRef.current) return;
     if (!signup) {
-      void handleLogin();
+      runOnce(handleLogin);
       return;
     }
     setTouched(true);
@@ -175,7 +192,7 @@ const Login: React.FC = () => {
       goToStep(step + 1);
       return;
     }
-    void handleSignup();
+    runOnce(handleSignup);
   };
 
   const ctaLabel = !signup ? 'Entrar' : step < LAST_STEP ? 'Continuar' : 'Crear mi cuenta';
