@@ -16,6 +16,8 @@ import {
   isStrongPassword, isValidEmail, isValidFullName, MIN_LOGIN_PASSWORD_LENGTH,
 } from '../lib/validation';
 import PasswordRules from '../components/PasswordRules';
+import TurnstileWidget, { type TurnstileHandle } from '../components/TurnstileWidget';
+import { captchaEnabled, captchaOptions } from '../lib/captcha';
 import './Login.css';
 
 type Mode = 'login' | 'signup';
@@ -61,6 +63,11 @@ const Login: React.FC = () => {
   const nameRef = useRef<HTMLIonInputElement>(null);
   const emailRef = useRef<HTMLIonInputElement>(null);
   const passwordRef = useRef<HTMLIonInputElement>(null);
+
+  // Captcha (Turnstile): solo si hay site key. El token es de un solo uso, asi que se pide uno nuevo tras cada intento.
+  const captchaRef = useRef<TurnstileHandle>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaUnavailable, setCaptchaUnavailable] = useState(false);
 
   const signup = mode === 'signup';
 
@@ -111,6 +118,18 @@ const Login: React.FC = () => {
     setTouched(false);
   };
 
+  /** Con captcha activo no se envia nada hasta tener token; devuelve true si se puede continuar. */
+  const captchaReady = (): boolean => {
+    if (!captchaEnabled || captchaToken) return true;
+    if (captchaUnavailable) {
+      // El aviso persistente ya esta en pantalla; el intento reintenta cargar el widget sin recargar la pagina.
+      captchaRef.current?.reset();
+    } else {
+      setError('Esperá un momento a que termine la verificación de seguridad e intentá de nuevo.');
+    }
+    return false;
+  };
+
   const handleLogin = async () => {
     setTouched(true);
     if (!isValidEmail(email) || password.trim().length < MIN_LOGIN_PASSWORD_LENGTH) {
@@ -118,11 +137,18 @@ const Login: React.FC = () => {
       return;
     }
 
+    if (!captchaReady()) return;
+
     setLoading(true);
     setError('');
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+      options: captchaOptions(captchaToken),
+    });
     setLoading(false);
     if (error) {
+      captchaRef.current?.reset();
       setError(getFriendlyErrorMessage(error));
       return;
     }
@@ -139,6 +165,8 @@ const Login: React.FC = () => {
       return;
     }
 
+    if (!captchaReady()) return;
+
     setLoading(true);
     setError('');
 
@@ -149,12 +177,13 @@ const Login: React.FC = () => {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { full_name: fullName.trim(), role } },
+      options: { data: { full_name: fullName.trim(), role }, ...captchaOptions(captchaToken) },
     });
 
     setLoading(false);
 
     if (signUpError || !data.user) {
+      captchaRef.current?.reset();
       setError(getFriendlyErrorMessage(signUpError ?? new Error('No se pudo crear la cuenta')));
       return;
     }
@@ -369,6 +398,20 @@ const Login: React.FC = () => {
               </>
             )}
           </div>
+
+          {/* Siempre montado mientras haya captcha: se resuelve mientras la persona llena el formulario y no
+              depende del modo ni del paso (invisible salvo que Cloudflare pida interaccion). */}
+          {captchaEnabled && (
+            <TurnstileWidget ref={captchaRef} onToken={setCaptchaToken} onUnavailable={setCaptchaUnavailable} />
+          )}
+          {captchaEnabled && captchaUnavailable && (
+            <IonText color="danger">
+              <p role="alert">
+                No pudimos cargar la verificación de seguridad. Revisá tu conexión o desactivá el bloqueador de contenido;
+                se reintentará al volver la conexión o al tocar de nuevo.
+              </p>
+            </IonText>
+          )}
 
           {idleLogoutNotice && !error && (
             <IonText color="medium">

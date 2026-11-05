@@ -20,6 +20,15 @@ export function getFriendlyErrorMessage(error: unknown): string {
   if (rawMessage.includes('sending confirmation email') || rawMessage.includes('email_config')) {
     return 'No pudimos completar el registro en este momento. Probá de nuevo en unos minutos.';
   }
+  // Captcha (Turnstile) rechazado o ausente: GoTrue responde 400 con error_code 'captcha_failed'.
+  // Se acota a los textos reales de GoTrue para no atrapar cualquier error que mencione la palabra "captcha".
+  if (
+    code === 'captcha_failed' ||
+    rawMessage.includes('captcha protection') ||
+    rawMessage.includes('captcha verification')
+  ) {
+    return 'No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo.';
+  }
   if (rawMessage.includes('invalid login credentials')) {
     return 'El correo o la contraseña no son correctos.';
   }
