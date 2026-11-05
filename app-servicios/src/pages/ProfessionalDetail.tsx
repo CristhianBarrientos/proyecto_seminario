@@ -14,6 +14,7 @@ import { serviceItemSchema, parseRowsReporting, droppedRowsNotice, type ServiceI
 import { useAuth } from '../contexts/AuthContext';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import ProfessionalReviews from '../components/ProfessionalReviews';
+import { MAX_BOOKING_NOTES } from '../lib/limits';
 import './ProfessionalDetail.css';
 
 interface ProfessionalData {
@@ -246,6 +247,7 @@ const ProfessionalDetail: React.FC = () => {
                           placeholder="Contale al profesional qué necesitás (opcional)"
                           value={notes}
                           onIonInput={(e) => setNotes(e.detail.value ?? '')}
+                          maxlength={MAX_BOOKING_NOTES}
                           autoGrow
                         />
                         {requestError && (

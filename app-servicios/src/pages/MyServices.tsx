@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
 import { isPositiveNumber } from '../lib/validation';
 import { PRICE_UNITS, DEFAULT_PRICE_UNIT, type PriceUnit } from '../lib/constants';
+import { MAX_SERVICE_TITLE } from '../lib/limits';
 import './MyServices.css';
 
 interface Category {
@@ -184,6 +185,7 @@ const MyServices: React.FC = () => {
             <IonInput
               value={title}
               onIonInput={(e) => setTitle(e.detail.value!)}
+              maxlength={MAX_SERVICE_TITLE}
               placeholder="Ej. Instalación eléctrica residencial"
             />
           </IonItem>

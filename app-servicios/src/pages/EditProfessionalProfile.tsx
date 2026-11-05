@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
 import { isPositiveNumber } from '../lib/validation';
+import { MAX_PROFESSIONAL_BIO } from '../lib/limits';
 import './EditProfessionalProfile.css';
 
 interface VerificationDoc {
@@ -208,7 +209,7 @@ const EditProfessionalProfile: React.FC = () => {
           <IonItem className="app-field" lines="none">
             <IonIcon icon={personOutline} slot="start" color="medium" />
             <IonLabel position="stacked">Sobre ti / tu experiencia</IonLabel>
-            <IonTextarea value={bio} onIonInput={(e) => setBio(e.detail.value!)} autoGrow />
+            <IonTextarea value={bio} onIonInput={(e) => setBio(e.detail.value!)} maxlength={MAX_PROFESSIONAL_BIO} autoGrow />
           </IonItem>
         </div>
 
