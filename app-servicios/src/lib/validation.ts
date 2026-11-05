@@ -1,3 +1,4 @@
+import { MAX_FULL_NAME } from './limits';
 /**
  * Validaciones básicas de formulario que corren ANTES de llamar al backend.
  * El objetivo es doble: mejor UX (feedback inmediato, sin ida y vuelta al
@@ -34,7 +35,11 @@ export const isValidEmail = (value: string): boolean => EMAIL_REGEX.test(value.t
 const NAME_WORD = "[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'-]*[A-Za-zÀ-ÖØ-öø-ÿ]";
 const FULL_NAME_REGEX = new RegExp(`^${NAME_WORD}(?:\\s+${NAME_WORD})+$`);
 
-export const isValidFullName = (value: string): boolean => FULL_NAME_REGEX.test(value.trim());
+export const isValidFullName = (value: string): boolean => {
+  const name = value.trim();
+  // El tope coincide con el CHECK de profiles.full_name: un nombre mas largo haria fallar el alta en la base.
+  return name.length <= MAX_FULL_NAME && FULL_NAME_REGEX.test(name);
+};
 
 /**
  * Al INICIAR sesión no se exige la política nueva: hay cuentas creadas con reglas más flojas y tienen que seguir

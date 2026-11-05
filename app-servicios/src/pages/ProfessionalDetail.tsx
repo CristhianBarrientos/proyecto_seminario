@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import ProfessionalReviews from '../components/ProfessionalReviews';
 import './ProfessionalDetail.css';
+import { MAX_BOOKING_NOTES } from '../lib/limits';
 
 interface ProfessionalData {
   profile_id: string;
@@ -246,6 +247,7 @@ const ProfessionalDetail: React.FC = () => {
                           placeholder="Contale al profesional qué necesitás (opcional)"
                           value={notes}
                           onIonInput={(e) => setNotes(e.detail.value ?? '')}
+                          maxlength={MAX_BOOKING_NOTES}
                           autoGrow
                         />
                         {requestError && (
