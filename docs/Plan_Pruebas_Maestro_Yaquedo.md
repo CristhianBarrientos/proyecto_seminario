@@ -9,7 +9,9 @@ Fecha: 2026-11-04 · Autor: SQA (sesión Claude) · Alcance: SOLO localhost. Pro
 | **[VERIFICADO]** | Lo ejecuté/leí yo en esta sesión (código, SQL, curl a localhost:8000, Chrome). |
 | **[PROPUESTA]** | Diseño de prueba, no ejecutada. |
 
-**Estado del entorno al ejecutar [VERIFICADO]:**
+> **ACTUALIZACIÓN (iteración 1b, 2026-11-05):** el front local ya respondía (Vite en `localhost:8100`, apunta a `localhost:8000`, sin captcha). Se ejecutó la evaluación en Chrome, TC-001..TC-005 y pruebas de API con la anon key local. Los resultados están en la **sección 11** y en la tabla de la sección 7. Donde esta sección 0 o las secciones 6 y 9 digan "por código", se aclara con la marca **[Chrome]** (verificado en navegador/API/BD local) o **[código]** (solo lectura). Los bullets de abajo son el estado de la primera pasada.
+
+**Estado del entorno en la primera pasada [VERIFICADO]:**
 - Front local NO estaba corriendo: `curl` a `localhost:8100`, `127.0.0.1:5173`, `localhost:5173`, `:3000`, `:8080` devolvió 000, y Chrome (pestaña nueva) mostró página de error en `http://localhost:8100`. Por la restricción de no arrancar servidores ni tocar el repo, **no hice la evaluación heurística en Chrome ni los breakpoints**; todo el pilar 6 es análisis estático de código/CSS (marcado así) más propuesta.
 - No serví `app-servicios/dist`: contiene la URL `api.yaquedo.shop` incrustada (grep) y apuntaría el front a producción.
 - Backend local sí está arriba: contenedores `supabase-*` healthy; Envoy escucha en `:8000`. Sin `apikey` válida todo responde 401 (incluido `/auth/v1/health`). No usé la anon key (vive en `.env`, fuera de alcance), así que las pruebas de caja gris autenticadas quedan como propuesta.
@@ -217,7 +219,7 @@ Cuellos de botella: `pg_stat_statements` (top por `total_exec_time`, `mean_exec_
 
 ## 6. UI/UX
 
-**Importante:** la evaluación en Chrome y la prueba de breakpoints **no se ejecutaron** (front local caído, ver sección 0). Lo siguiente es **hallazgo por análisis estático [VERIFICADO en código/CSS]** o **[PROPUESTA]**.
+**Importante:** las tablas 6.1 a 6.4 son la versión de la primera pasada (análisis estático [código] y propuesta). La evaluación real en Chrome, axe-core y breakpoints está en la **sección 11**, que prevalece donde difiera.
 
 ### 6.1 Heurísticas de Nielsen (hallazgos en código)
 | # | Heurística | Hallazgo | Pantalla/elemento | Evidencia |
@@ -273,10 +275,10 @@ Todos contra localhost. Estado = resultado REAL de esta sesión.
 
 | ID | Descripción | Precondiciones | Pasos | Resultados esperados | Estado |
 |---|---|---|---|---|---|
-| TC-001 | Login válido del cliente demo | Front en `http://localhost:8100` o `127.0.0.1:5173`; backend `:8000`; cuenta demo creada | 1. Abrir `/login`. 2. Correo `maria.cliente@demo.com`. 3. Clave demo. 4. "Entrar". | Redirige a `/tabs/home`; feed visible; sin errores en consola | **Bloqueado** - front local no responde (curl 000 en 5 puertos; Chrome: página de error en `localhost:8100`). |
-| TC-002 | Registro paso 1 rechaza nombre inválido | Front arriba | 1. `/login?modo=registro`. 2. Nombre "Maria". 3. Continuar. | Permanece en paso 1; mensaje "Ingresá tu nombre y apellido (solo letras, sin números)."; con "María López" avanza al paso 2 | **Bloqueado** - mismo motivo. Lógica leída coherente con `signup.cy.ts`. |
-| TC-003 | Solicitud activa duplicada | Sesión de María; servicio de Carlos; front arriba | 1. Perfil de Carlos. 2. Solicitar servicio X. 3. Repetir sobre X. | 1.ª: ok `solicitado`; 2.ª: error "Ya tenés una solicitud activa para este servicio..." (23505) | **Bloqueado** - front caído. Regla verificada solo por lectura del SQL (índice único parcial). |
-| TC-004 | Reseña de 501 caracteres | Booking completada de María con Carlos | 1. Calificar, 5 estrellas. 2. Pegar 501 caracteres. 3. Publicar. | UI trunca a 500 (`maxlength`); por API 501 es rechazado por CHECK | **Bloqueado** - front caído; API autenticada requiere anon key de `.env` (fuera de alcance). |
+| TC-001 | Login válido del cliente demo | Front en `http://localhost:8100` o `127.0.0.1:5173`; backend `:8000`; cuenta demo creada | 1. Abrir `/login`. 2. Correo `maria.cliente@demo.com`. 3. Clave demo. 4. "Entrar". | Redirige a `/tabs/home`; feed visible; sin errores en consola | **Pasó [Chrome]** - login con `maria.cliente@demo.com`: Enter en el formulario redirigió a `/tabs/home`, feed cargado (RPC `feed_services` 200), sin errores en consola. Login Carlos por API: 200. |
+| TC-002 | Registro paso 1 rechaza nombre inválido | Front arriba | 1. `/login?modo=registro`. 2. Nombre "Maria". 3. Continuar. | Permanece en paso 1; mensaje "Ingresá tu nombre y apellido (solo letras, sin números)."; con "María López" avanza al paso 2 | **Pasó [Chrome]** - "Maria" -> se queda en Paso 1 con "Ingresá tu nombre y apellido (solo letras, sin números)." (campo en rojo). "Ana Prueba" avanzó; flujo completo de 3 pasos con `qa2@test.local` creó la cuenta y redirigió a `/tabs/home`. Hallazgo: el mensaje no tiene `role`, ni `aria-invalid`, ni `aria-describedby` (UX-05). |
+| TC-003 | Solicitud activa duplicada | Sesión de María; servicio de Carlos; front arriba | 1. Perfil de Carlos. 2. Solicitar servicio X. 3. Repetir sobre X. | 1.ª: ok `solicitado`; 2.ª: error "Ya tenés una solicitud activa para este servicio..." (23505) | **Pasó [Chrome]** - como María sobre el servicio de Carlos (ya tenía una solicitud `aceptado`): el INSERT fue rechazado y la UI mostró "Ya tenés una solicitud activa para este servicio. Podés verla en Solicitudes." (12.8 px, rgb(225,114,104)). No se creó ningún dato. Nota UX: el botón "Solicitar servicio" sigue ofrecido pese a existir solicitud activa (UX-06). |
+| TC-004 | Reseña de 501 caracteres | Booking completada de María con Carlos | 1. Calificar, 5 estrellas. 2. Pegar 501 caracteres. 3. Publicar. | UI trunca a 500 (`maxlength`); por API 501 es rechazado por CHECK | **Pasó [Chrome + API]** - UI: se tecleó >500 caracteres y el campo quedó en 500 (`maxlength=500`, contador "0 / 500"); se canceló sin publicar. API (María, booking completada): 501 caracteres -> 400 `reviews_comment_len`; solo espacios -> 400 `reviews_comment_len`; rating 6 y 0 -> 400 `reviews_rating_check`; 500 caracteres -> 201 (control, borrada de inmediato). |
 | TC-005 | El gateway local rechaza peticiones sin `apikey` válida | Contenedores `supabase-*` healthy | 1. `curl -i http://localhost:8000/auth/v1/health`. 2. `curl -H "apikey: invalid" http://localhost:8000/rest/v1/profiles`. 3. `POST /auth/v1/signup` con apikey inválida. 4. `POST /rest/v1/rpc/nearby_professionals` sin clave. | Todas 401, sin datos | **Pasó** - 401 en los 4 casos (cabecera `server: envoy`). Evidencia: salida de curl en esta sesión. |
 
 ## 8. Plantilla de reporte de hallazgos (UX/UI y bugs)
@@ -321,3 +323,125 @@ Estado / Asignado:  Nuevo | Triaje | En curso | Verificado | Cerrado · <respons
 3. Crear las suites pgTAP y la configuración de cobertura; evaluar Playwright para flujos multi-usuario.
 4. Ejecutar k6 solo contra un entorno local/staging aislado, nunca OCI en producción sin autorización de ventana.
 5. Pasar la fase de humo a producción (read-only) tras el despliegue.
+
+---
+
+## 11. Resultados de la iteración 1b: Chrome + API + BD local (2026-11-05)
+
+Entorno: front `http://localhost:8100` (Vite, rama `chore/pin-vite-8.3.4`, sin captcha), backend `http://localhost:8000`, Chrome en pestaña nueva, ventana 1920x911. Todo **[Chrome]** = ejecutado por mí en esta pasada; **[API]** = llamadas a `localhost:8000` con la anon key local; **[BD local]** = consulta de solo lectura al contenedor `supabase-db`. No se modificó código, SQL ni repo; los datos que se tocaron por API se restauraron (ver 11.6).
+
+**Limitación de método:** `resize_window` cambia la ventana pero no el viewport que ve la página (siguió en 1920x911). Los breakpoints se probaron cargando la misma ruta en un `iframe` same-origin de 360, 390, 768, 1024 y 1440 px de ancho (las media queries y el layout responden al ancho del iframe; el scrollbar clásico resta ~4 px, por eso aparece vw=356, 386, etc.). Es una buena aproximación, no sustituye al dispositivo (Capacitor, teclado, safe-area).
+
+### 11.1 Casos funcionales
+
+| ID | Estado real | Evidencia |
+|---|---|---|
+| TC-001 | Pasó | Login demo -> `/tabs/home` |
+| TC-002 | Pasó | Nombre "Maria" rechazado en paso 1; alta completa con `qa2@test.local` OK |
+| TC-003 | Pasó | Duplicado rechazado con mensaje correcto, 0 filas nuevas |
+| TC-004 | Pasó | UI corta a 500; API 501 -> 400 `reviews_comment_len` |
+| TC-005 | Pasó | Gateway 401 sin apikey válida (primera pasada) |
+
+Extra: E2E-03 (credencial mala por API) y registro de 3 pasos verificados; E2E-07 a E2E-09 y E2E-11/12 no ejecutados.
+
+### 11.2 Evaluación heurística de Nielsen [Chrome]
+
+| Pantalla | Heurística | Hallazgo concreto |
+|---|---|---|
+| Landing `/` | H8 Estética / H4 Consistencia | **A 360 px el texto del hero se corta por la derecha**: `h1` y párrafo llegan a x=344 px y la tarjeta `.landing-hero` (`overflow:hidden`) termina en x=325 (iframe de 356 px). Se ve "El profesional que" y "todo en un" recortados. No ocurre a 390, 768 ni 1024. |
+| Landing | H6 | Nav superior (Cómo funciona, Profesionales, Preguntas, Android) con enlaces de texto de menos de 24 px de alto desde 768 px; en el footer a 360 px, 5 enlaces menores de 24 px |
+| Login `/login` | H1 Visibilidad / H5 Prevención | Bien: etiqueta persistente, contraseña con ojo, errores en rojo y claros. Etiquetas `ion-label` a 12.5 px, gris rgb(146,153,159). A 1920 px la tarjeta ocupa ~380 px y deja gran parte de la pantalla vacía (cosmético). |
+| Login | H4 / H6 | **A 360 px las pestañas "Iniciar sesión / Crear cuenta" se truncan ("INICIAR SESI...", "CREAR CUEN...")** |
+| Registro paso 1 | H5 Prevención / H9 Errores | El error "Ingresá tu nombre y apellido..." aparece sin `role="alert"`, sin `aria-invalid` ni `aria-describedby` (confirmado en el DOM). Al aparecer el mensaje, el botón Continuar se desplaza ~10 px hacia abajo (salto de layout). |
+| Registro pasos 2 y 3 | H1 Visibilidad | Bien: barra "Paso n de 3" con `role=progressbar`, "Atrás" conserva datos, lista de requisitos de contraseña en vivo. Mejora: requisitos a ~12 px y sin región `aria-live`. |
+| Registro | H3 Control | El rol (Cliente/Profesional) se elige en el paso 1; la UI no permite cambiarlo después, pero **sí se puede por API** (SEC-02). |
+| Home `/tabs/home` | H2 Correspondencia con el mundo | Título "Servicios **cerca de ti**" pero el feed no usa ubicación ni ordena por cercanía. Unidad de precio cruda ("servicio", "dia", "hora") a 10.88 px; datos de prueba repetidos (5 tarjetas "Pedro Plomero Prueba", "QA Prof A"). En 1920 px las tarjetas se estiran a todo el ancho (sin `max-width`). |
+| Home a 360 px | H8 | Títulos de servicio truncados con elipsis ("Reparación de tube..."), sin tooltip ni salto de línea |
+| Perfil profesional | H1 / H5 | "Solicitar servicio" sigue habilitado aunque el cliente ya tiene una solicitud activa (se descubre solo al fallar). Error de duplicado a 12.8 px. "Todavía no tiene reseñas..." bien redactado. |
+| Bookings `/tabs/bookings` | H7 Flexibilidad / H8 | **A 360 y 390 px los filtros (Todas/Pendientes/Aceptadas/Canceladas/Completadas) desbordan y obligan a scroll horizontal con barra nativa visible**; "Canceladas" y "Completadas" quedan ocultas sin indicio. La campana flotante (FAB de notificaciones) se superpone al borde de las tarjetas. Títulos truncados ("Instalación y reparación eléctric..."). "Seleccionar para eliminar" y chips de estado a 11.5 px. |
+| Bookings | H1 | Bien: chip de estado, "Precio acordado" visible, "Calificar profesional" aparece en completadas |
+| Bookings (navegación) | H1 | Una vez, al ir de Home a Solicitudes con la pestaña, el spinner quedó más de 8 s sin contenido (no se reprodujo tras recargar; posible compilación fría de Vite dev). Pendiente reproducir en build de producción. |
+| Perfil `/tabs/profile` | H2 / H5 | "Cerrar sesión" cierra al instante, sin confirmación (aceptable). El interruptor "Modo noche" no tiene nombre accesible (axe `aria-toggle-field-name`). |
+| Reseña | H5 | Bien: contador "n / 500", aviso de que la reseña es pública, "Publicar reseña" deshabilitado hasta elegir estrellas. |
+
+### 11.3 Breakpoints [Chrome, vía iframe]
+
+| Pantalla | 360x740 | 390x844 | 768x1024 | 1024x768 | 1440x900 |
+|---|---|---|---|---|---|
+| Landing | Texto del hero recortado (~19 px); 5 targets <24 px | OK; 5 targets <24 px | OK; 9 targets <24 px (nav) | OK | OK |
+| Login / Registro | Pestañas truncadas; botón Continuar 36 px de alto (<44) | Igual | OK | OK | n/m |
+| Home | Sin desborde horizontal; 0 targets <24; títulos truncados | OK | OK | OK | OK |
+| Bookings | Filtros desbordan (4 elementos fuera del viewport) | Igual | OK | OK | OK |
+| Perfil / Detalle | OK | n/m | OK | n/m | OK |
+
+Texto menor de 12 px: Home 23 nodos (unidad de precio 10.88 px), Bookings 13 (chips 11.52 px), Perfil 4 (11.52 px), mockup de la landing 9.92 px (decorativo). Ninguna pantalla tiene scroll horizontal del documento (scrollWidth = ancho de viewport).
+
+### 11.4 axe-core 4.10.2 [Chrome]
+
+Se inyectó desde `cdn.jsdelivr.net` con `fetch` + `eval` en la página local: **funcionó** (sin bloqueo de CSP). Etiquetas: wcag2a/2aa, 21a/21aa, 22aa, best-practice.
+
+| Pantalla | Violaciones (impacto, nodos) |
+|---|---|
+| Landing | `meta-viewport` critical (1); `role-img-alt` serious (1); `landmark-banner-is-top-level` y `landmark-contentinfo-is-top-level` moderate |
+| Login / Registro | `meta-viewport` critical; `role-img-alt` serious (4) |
+| Home | `meta-viewport` critical; `role-img-alt` serious (**42**); `region` moderate (ion-tab-bar) |
+| Perfil profesional | `meta-viewport`; `role-img-alt` (10); `region` |
+| Bookings | `meta-viewport`; `role-img-alt` (**57**); `region` |
+| Perfil | `meta-viewport`; `role-img-alt` (6); **`aria-toggle-field-name` serious (1, "Modo noche")**; `region` |
+
+`avoid-inline-spacing` aparece en todas pero lo causa una extensión del navegador (`deepl-input-controller`), no la app. `color-contrast` salió como "incompleto" (3 a 4 nodos por pantalla): sin fallos confirmados automáticamente; requiere revisión manual (texto sobre degradados del hero, chips y `ion-color-medium`).
+
+### 11.5 Consola y red [Chrome]
+
+- Consola: 0 errores en landing, login, registro, home, detalle, bookings y perfil. Solo 2 warnings de React Router v6 (`v7_startTransition`, `v7_relativeSplatPath`) y logs de Vite.
+- Red: todas las llamadas a `localhost:8000` respondieron 200 (`profiles`, `notifications`, `rpc/feed_services`, `rpc/my_bookings`, `reviews`, `client_ratings`), salvo los rechazos esperados de las pruebas. Sin 4xx/5xx inesperados en la UI.
+- **Terceros (privacidad)**: la app llama a `fonts.googleapis.com` / `fonts.gstatic.com` y a **`api.dicebear.com/7.x/initials/svg?seed=<nombre completo>`**: el nombre y apellido del usuario viajan en la URL a un servicio externo (observado con el nombre de la cuenta demo). Ver SEC-03.
+
+### 11.6 Hallazgos "por código" confirmados o refutados, y nuevos
+
+| ID | Resultado | Cómo se verificó |
+|---|---|---|
+| BUG-01 `user-scalable=no` / `maximum-scale=1` | **CONFIRMADO [Chrome]** | `meta` en el DOM vivo y axe `meta-viewport` critical en las 6 pantallas |
+| BUG-02 textos pequeños | **CONFIRMADO [Chrome]** | 10.88 px (unidad de precio), 11.52 px (chips, "Cliente", "Mi reputación"), 9.92 px (landing); ~12.1 a 12.5 px en etiquetas y errores. Matiz: el 10 px de `ProfessionalDashboard.css` no se vio (no se probó el rol profesional en la UI) |
+| BUG-03 notas/bio/nombre sin límite | **CONFIRMADO [API]** | `PATCH` con 100 000 caracteres a `bookings.notes` -> 200; 100 000 a `professional_profiles.bio` -> 200; 5 000 a `profiles.full_name` -> 200. En la UI el `ion-textarea` de notas tiene `maxLength = -1`. |
+| BUG-04 `price_unit` libre | **CONFIRMADO [API]** | `PATCH services.price_unit = "xyz"` -> 200 |
+| BUG-05 IonTextarea / IonSearchbar sin etiqueta | **REFUTADO PARCIALMENTE [Chrome]** | axe no marca ningún campo de texto: el `textarea` tiene 1 `label` asociado y el `searchbar` expone `aria-label="search text"` (genérico y en inglés, no descriptivo). Lo que sí falla: `ion-toggle` "Modo noche" sin nombre, y `field-error` sin `aria-invalid`/`describedby`/`role` |
+| BUG-06 feed "cerca de ti" sin ubicación | **CONFIRMADO [Chrome]** | Home sin geolocalización ni orden por distancia; `nearby_professionals` sin consumidor |
+| BUG-07 inactividad 30 vs 45 min | Sin cambios (código y Cypress dicen 30) | No se esperó 29 min; pendiente alinear la regla |
+| SEC-01 `search_path` | **CONFIRMADO [BD local, solo lectura]** | `pg_proc`: `validate_booking_update`, `validate_review_insert` y `protect_is_verified` son `SECURITY DEFINER` sin `search_path` configurado; el resto sí lo fija (`public, pg_catalog`) |
+| **SEC-02 (nuevo, ALTA)** | **CONFIRMADO [API + BD local]** | Un cliente puede cambiar su propio rol: `PATCH /rest/v1/profiles?id=eq.<yo>` con `{"role":"profesional"}` -> 200 (política `profiles_update_own` sin restricción de columnas; `authenticated` tiene UPDATE sobre `role`). Se revirtió de inmediato a `cliente` y se verificó. Impacto acotado porque el rol ya es de libre elección al registrarse, pero rompe la separación cliente/profesional y cualquier política que dependa de `profiles.role`. Remediación: `REVOKE UPDATE (role) ON public.profiles FROM authenticated` o un trigger que impida cambiar `role`. |
+| SEC-03 (nuevo) | **CONFIRMADO [Chrome]** | Nombre completo enviado a `api.dicebear.com` y fuentes desde Google. Remediación: generar iniciales localmente (CSS/SVG), servir la fuente local y actualizar el aviso de privacidad. |
+| SEC-04 (nuevo, media) | **CONFIRMADO [API]** | Enumeración de usuarios: `POST /auth/v1/signup` con un correo existente -> 422 `user_already_exists`; el login con correo inexistente vs clave errónea responde igual (400 `invalid_credentials`). Con autoconfirm no hay respuesta neutra posible: exigir captcha (#5) y limitar por IP. |
+| DATA-01 (nuevo) | **CONFIRMADO [BD local]** | 1 usuario en `auth.users` sin fila en `profiles` (`qa_userc@example.com`, 2026-09-13, anterior al trigger `handle_new_user`). Limpiar. |
+| UX-05 / UX-06 / UX-07 | **CONFIRMADOS [Chrome]** | Errores de campo sin ARIA; "Solicitar" habilitado con solicitud activa; `ion-toggle` sin nombre |
+| BUG-08 (nuevo) | **CONFIRMADO [Chrome, iframe 360]** | Hero de la landing recortado a 360 px (ver 11.2). Verificar en dispositivo real (el iframe tiene scrollbar de 4 px). |
+| BUG-09 (nuevo) | **CONFIRMADO [Chrome, iframe 360]** | Pestañas del login truncadas y filtros de bookings que desbordan |
+| BUG-10 (nuevo) | **CONFIRMADO [Chrome/axe]** | `role-img-alt` serious en 42 a 57 `ion-icon` por pantalla (iconos decorativos sin `aria-hidden="true"`); fix global con un wrapper o `aria-hidden` en cada `IonIcon` |
+
+**Pruebas de API ejecutadas [API]** (resumen):
+- Autenticación: credenciales demo OK; signup con contraseña `abc` -> 422 `weak_password` con la política de GoTrue; signup con `role:"admin"` -> 500 `Database error saving new user` (rollback sin usuario huérfano; mensaje genérico); signup `profesional` -> 200.
+- Autorización: María solo ve sus 11 reservas (0 ajenas); PATCH a un servicio de Carlos como María -> 0 filas; cliente `solicitado -> completado` -> P0001 "Transición de estado no permitida para el cliente"; anon sobre `reviews`, `bookings`, `profiles` -> `[]`, sobre `messages`/`notifications` -> 401, sobre `nearby_professionals` y `register_device_token` -> 401, `rpc_rate_limit` -> 403.
+- `nearby_professionals`: llamadas 1 a 30 -> 200, **31, 32 y 33 -> 429** (límite de 30/min verificado), radio 999 aceptado y acotado, lat 91 -> 400 "Coordenadas invalidas".
+- Datos restaurados tras las pruebas: `profiles.role` y `full_name` de María, `bookings.notes`, `professional_profiles.bio` y `services.price_unit` de Carlos. Se crearon 2 cuentas desechables: `qa1@test.local` (profesional, por API) y `qa2@test.local` (cliente, por UI), pendientes de borrar por el dueño (la anon key no puede borrar usuarios).
+
+### 11.7 Checklist WCAG 2.2 AA actualizado
+
+| Criterio | Estado tras Chrome |
+|---|---|
+| 1.4.4 Redimensionar texto / meta-viewport | **FALLA** (confirmado) |
+| 1.4.3 Contraste | Sin fallos automáticos; 3 a 4 nodos "incompletos" por pantalla: revisión manual pendiente |
+| 1.4.10 Reflow a 320/360 px | **FALLA** en Landing (texto recortado), Login (pestañas truncadas) y Bookings (filtros con scroll horizontal) |
+| 2.5.8 Tamaño de objetivo 24 px | Pasa en la app (0 elementos <24 px en Home/Bookings/Login/Perfil); falla en enlaces de texto de la nav y footer de la landing |
+| Recomendación 44 px | 20 elementos <44 px en Bookings; botón mostrar contraseña 36x36; Continuar 36 px |
+| 4.1.2 Nombre, rol, valor | **FALLA**: `ion-toggle` "Modo noche" sin nombre; `role-img-alt` (42 a 57 iconos) |
+| 3.3.1 / 4.1.3 Errores y mensajes | **FALLA parcial**: errores de campo sin `role`, `aria-invalid`, `aria-describedby` |
+| 1.3.1 Landmarks | `region` (ion-tab-bar fuera de landmark); landmarks de la landing no de nivel superior (moderate) |
+| 2.4.7 Foco visible, TalkBack/NVDA, `prefers-reduced-motion` | No ejecutado (requiere teclado/lector); sigue como propuesta |
+
+### 11.8 Bloqueado / pendiente
+
+- Rol profesional en la UI (dashboard, aceptar/rechazar/completar), chat, Realtime, push y Storage: no ejecutados en Chrome (no se manipularon estados de reservas para no alterar los datos de demo).
+- Cierre por inactividad (29/30 min): se prueba con reloj simulado en Cypress; no se esperó en vivo.
+- Prueba en dispositivo real/APK, foco y teclado, lector de pantalla y contraste manual.
+- Reproducir en `vite build` el spinner largo al entrar en Solicitudes.
+- Borrado de `qa1@test.local`, `qa2@test.local` y del usuario huérfano `qa_userc@example.com`.
