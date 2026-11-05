@@ -18,8 +18,8 @@ import {
 import PasswordRules from '../components/PasswordRules';
 import TurnstileWidget, { type TurnstileHandle } from '../components/TurnstileWidget';
 import { captchaEnabled, captchaOptions } from '../lib/captcha';
-import './Login.css';
 import { MAX_FULL_NAME } from '../lib/limits';
+import './Login.css';
 
 type Mode = 'login' | 'signup';
 type Role = 'cliente' | 'profesional';

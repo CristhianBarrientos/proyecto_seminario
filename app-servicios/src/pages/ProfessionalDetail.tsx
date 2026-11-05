@@ -14,8 +14,8 @@ import { serviceItemSchema, parseRowsReporting, droppedRowsNotice, type ServiceI
 import { useAuth } from '../contexts/AuthContext';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import ProfessionalReviews from '../components/ProfessionalReviews';
-import './ProfessionalDetail.css';
 import { MAX_BOOKING_NOTES } from '../lib/limits';
+import './ProfessionalDetail.css';
 
 interface ProfessionalData {
   profile_id: string;

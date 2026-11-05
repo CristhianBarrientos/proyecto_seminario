@@ -13,8 +13,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
 import { isPositiveNumber } from '../lib/validation';
-import './EditProfessionalProfile.css';
 import { MAX_PROFESSIONAL_BIO } from '../lib/limits';
+import './EditProfessionalProfile.css';
 
 interface VerificationDoc {
   path: string;

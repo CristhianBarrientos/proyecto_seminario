@@ -1,4 +1,3 @@
-import { MAX_FULL_NAME } from './limits';
 /**
  * Validaciones básicas de formulario que corren ANTES de llamar al backend.
  * El objetivo es doble: mejor UX (feedback inmediato, sin ida y vuelta al
@@ -8,6 +7,7 @@ import { MAX_FULL_NAME } from './limits';
  * Esto no reemplaza la validación del lado del servidor (constraints de
  * columnas, RLS, etc.) - es la primera capa, no la única.
  */
+import { MAX_FULL_NAME } from './limits';
 
 /**
  * Regex de correo robusta (no RFC 5322 completo, pero cubre los defectos

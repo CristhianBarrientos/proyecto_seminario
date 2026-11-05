@@ -13,8 +13,8 @@ import { supabase } from '../lib/supabaseClient';
 import { getFriendlyErrorMessage } from '../lib/errorMessages';
 import { isPositiveNumber } from '../lib/validation';
 import { PRICE_UNITS, DEFAULT_PRICE_UNIT, type PriceUnit } from '../lib/constants';
-import './MyServices.css';
 import { MAX_SERVICE_TITLE } from '../lib/limits';
+import './MyServices.css';
 
 interface Category {
   id: number;
