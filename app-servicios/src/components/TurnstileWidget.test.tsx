@@ -7,8 +7,8 @@ type RenderOptions = Record<string, (arg?: string) => void> & { sitekey: string;
 describe('TurnstileWidget', () => {
   let options: RenderOptions;
   const api = {
-    render: vi.fn((_el: HTMLElement, opts: RenderOptions) => {
-      options = opts;
+    render: vi.fn((_el: HTMLElement, opts: Record<string, unknown>) => {
+      options = opts as unknown as RenderOptions;
       return 'widget-1';
     }),
     reset: vi.fn(),
