@@ -121,11 +121,12 @@ const Login: React.FC = () => {
   /** Con captcha activo no se envia nada hasta tener token; devuelve true si se puede continuar. */
   const captchaReady = (): boolean => {
     if (!captchaEnabled || captchaToken) return true;
-    setError(
-      captchaUnavailable
-        ? 'No pudimos cargar la verificación de seguridad. Revisá tu conexión y recargá la página.'
-        : 'Esperá un momento a que termine la verificación de seguridad e intentá de nuevo.',
-    );
+    if (captchaUnavailable) {
+      // El aviso persistente ya esta en pantalla; el intento reintenta cargar el widget sin recargar la pagina.
+      captchaRef.current?.reset();
+    } else {
+      setError('Esperá un momento a que termine la verificación de seguridad e intentá de nuevo.');
+    }
     return false;
   };
 
@@ -146,8 +147,8 @@ const Login: React.FC = () => {
       options: captchaOptions(captchaToken),
     });
     setLoading(false);
-    captchaRef.current?.reset();
     if (error) {
+      captchaRef.current?.reset();
       setError(getFriendlyErrorMessage(error));
       return;
     }
@@ -180,9 +181,9 @@ const Login: React.FC = () => {
     });
 
     setLoading(false);
-    captchaRef.current?.reset();
 
     if (signUpError || !data.user) {
+      captchaRef.current?.reset();
       setError(getFriendlyErrorMessage(signUpError ?? new Error('No se pudo crear la cuenta')));
       return;
     }
@@ -398,9 +399,18 @@ const Login: React.FC = () => {
             )}
           </div>
 
-          {/* Se monta en login y en el ultimo paso del registro: se resuelve justo antes de enviar. */}
-          {captchaEnabled && (!signup || step === LAST_STEP) && (
+          {/* Siempre montado mientras haya captcha: se resuelve mientras la persona llena el formulario y no
+              depende del modo ni del paso (invisible salvo que Cloudflare pida interaccion). */}
+          {captchaEnabled && (
             <TurnstileWidget ref={captchaRef} onToken={setCaptchaToken} onUnavailable={setCaptchaUnavailable} />
+          )}
+          {captchaEnabled && captchaUnavailable && (
+            <IonText color="danger">
+              <p role="alert">
+                No pudimos cargar la verificación de seguridad. Revisá tu conexión o desactivá el bloqueador de contenido;
+                se reintentará al volver la conexión o al tocar de nuevo.
+              </p>
+            </IonText>
           )}
 
           {idleLogoutNotice && !error && (

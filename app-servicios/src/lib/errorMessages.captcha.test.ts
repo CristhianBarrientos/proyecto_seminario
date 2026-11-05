@@ -11,8 +11,13 @@ describe('errores de captcha (Turnstile) de GoTrue', () => {
     [{ message: 'captcha verification process failed' }],
   ])('%j -> mensaje claro, sin texto crudo del servidor', (err) => {
     const msg = getFriendlyErrorMessage(err);
-    expect(msg).toBe('No pudimos verificar que eres una persona. Recargá la página e intentá de nuevo.');
+    expect(msg).toBe('No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo.');
     expect(msg.toLowerCase()).not.toContain('invalid-input');
+  });
+
+  it('no atrapa errores que solo mencionan la palabra captcha', () => {
+    const msg = getFriendlyErrorMessage({ message: 'upstream sent a page that mentions captcha settings', status: 502 });
+    expect(msg).not.toContain('sos una persona');
   });
 
   it('no altera el mensaje de credenciales incorrectas', () => {

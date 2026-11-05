@@ -43,12 +43,15 @@ export function loadTurnstile(): Promise<TurnstileApi> {
     script.src = TURNSTILE_SCRIPT_SRC;
     script.async = true;
     script.defer = true;
-    script.onload = () => (window.turnstile ? resolve(window.turnstile) : reject(new Error('turnstile no disponible')));
-    script.onerror = () => {
+    // Cualquier fallo (red, bloqueador, o api.js cargado pero sin window.turnstile) libera la promesa cacheada y
+    // quita la etiqueta, para que el siguiente intento vuelva a pedir el script en vez de heredar el rechazo.
+    const fail = (message: string) => {
       script.remove();
       scriptPromise = null;
-      reject(new Error('No se pudo cargar Turnstile'));
+      reject(new Error(message));
     };
+    script.onload = () => (window.turnstile ? resolve(window.turnstile) : fail('turnstile no disponible'));
+    script.onerror = () => fail('No se pudo cargar Turnstile');
     document.head.appendChild(script);
   });
   return scriptPromise;

@@ -77,7 +77,7 @@ describe('TurnstileWidget', () => {
     expect(onToken).toHaveBeenLastCalledWith(null);
   });
 
-  it('un error del reto avisa que no esta disponible y muestra el mensaje', async () => {
+  it('un error del reto avisa que no esta disponible (sin mensaje propio) y se limpia al resolverse', async () => {
     const TurnstileWidget = await setup();
     const onToken = vi.fn();
     const onUnavailable = vi.fn();
@@ -87,11 +87,10 @@ describe('TurnstileWidget', () => {
     act(() => options['error-callback']());
 
     expect(onUnavailable).toHaveBeenLastCalledWith(true);
-    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos cargar la verificación');
+    // El aviso lo muestra el padre una sola vez: el widget no renderiza su propio alert.
+    expect(screen.queryByRole('alert')).toBeNull();
 
-    // Si luego el reto se resuelve, el aviso desaparece.
     act(() => options.callback('tok-ok'));
-    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
     expect(onUnavailable).toHaveBeenLastCalledWith(false);
   });
 

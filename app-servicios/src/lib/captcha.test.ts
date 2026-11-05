@@ -38,3 +38,40 @@ describe('captcha encendido', () => {
     expect(captchaOptions(null)).toBeUndefined();
   });
 });
+
+describe('loadTurnstile: recuperacion tras un fallo de carga', () => {
+  const scripts = () => [...document.head.querySelectorAll('script')].filter((s) => s.src.includes('turnstile'));
+
+  afterEach(() => {
+    scripts().forEach((s) => s.remove());
+    delete window.turnstile;
+  });
+
+  it('onerror: rechaza, quita el script y el siguiente intento vuelve a pedirlo', async () => {
+    const { loadTurnstile } = await loadCaptcha('1x00000000000000000000AA');
+    const first = loadTurnstile();
+    expect(scripts()).toHaveLength(1);
+    scripts()[0].onerror?.(new Event('error'));
+    await expect(first).rejects.toThrow();
+    expect(scripts()).toHaveLength(0);
+
+    const second = loadTurnstile();
+    expect(scripts()).toHaveLength(1);
+    window.turnstile = { render: () => 'w', reset: () => {}, remove: () => {} };
+    scripts()[0].onload?.(new Event('load'));
+    await expect(second).resolves.toBe(window.turnstile);
+  });
+
+  it('onload sin window.turnstile: tambien libera la promesa (no hereda el rechazo)', async () => {
+    const { loadTurnstile } = await loadCaptcha('1x00000000000000000000AA');
+    const first = loadTurnstile();
+    scripts()[0].onload?.(new Event('load')); // api.js "cargo" pero no definio window.turnstile
+    await expect(first).rejects.toThrow('turnstile no disponible');
+    expect(scripts()).toHaveLength(0);
+
+    const second = loadTurnstile();
+    expect(second).not.toBe(first);
+    expect(scripts()).toHaveLength(1);
+    second.catch(() => {});
+  });
+});
