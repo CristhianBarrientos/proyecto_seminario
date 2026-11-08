@@ -5,6 +5,7 @@ import {
   PASSWORD_SPECIALS,
   checkPasswordRules,
   isStrongPassword,
+  isValidFullName,
 } from './validation';
 
 describe('política de contraseña al crear cuenta', () => {
@@ -51,5 +52,27 @@ describe('política de contraseña al crear cuenta', () => {
 describe('inicio de sesión', () => {
   it('no exige la política nueva: cuentas con reglas anteriores deben seguir entrando', () => {
     expect(MIN_LOGIN_PASSWORD_LENGTH).toBeLessThan(MIN_PASSWORD_LENGTH);
+  });
+});
+
+describe('nombre completo: largo maximo (coincide con el CHECK de profiles.full_name)', () => {
+  // 100 caracteres exactos: dos palabras validas separadas por un espacio
+  const exacto = `A${'a'.repeat(49)} B${'b'.repeat(48)}`;
+
+  it('acepta el tope exacto de 100 caracteres', () => {
+    expect(exacto).toHaveLength(100);
+    expect(isValidFullName(exacto)).toBe(true);
+  });
+
+  it('rechaza 101 caracteres', () => {
+    expect(isValidFullName(`${exacto}b`)).toBe(false);
+  });
+
+  it('el tope se mide sin los espacios de los extremos', () => {
+    expect(isValidFullName(`  ${exacto}  `)).toBe(true);
+  });
+
+  it('sigue aceptando nombres normales', () => {
+    expect(isValidFullName('María López')).toBe(true);
   });
 });

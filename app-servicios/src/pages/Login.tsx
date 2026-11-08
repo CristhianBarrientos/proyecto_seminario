@@ -18,6 +18,7 @@ import {
 import PasswordRules from '../components/PasswordRules';
 import TurnstileWidget, { type TurnstileHandle } from '../components/TurnstileWidget';
 import { captchaEnabled, captchaOptions } from '../lib/captcha';
+import { MAX_FULL_NAME } from '../lib/limits';
 import './Login.css';
 
 type Mode = 'login' | 'signup';
@@ -275,6 +276,7 @@ const Login: React.FC = () => {
                     ref={nameRef}
                     value={fullName}
                     autocomplete="name"
+                    maxlength={MAX_FULL_NAME}
                     placeholder="Ej. María López"
                     onIonInput={(e) => setFullName(e.detail.value!)}
                   />

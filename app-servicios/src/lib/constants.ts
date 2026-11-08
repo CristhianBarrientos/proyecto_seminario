@@ -1,8 +1,8 @@
 /**
- * price_unit en la tabla `services` es `text` libre (sin CHECK constraint,
- * ver sql_docker/schema-inicial.sql:75) - esta lista es la única fuente de
- * verdad del lado del frontend para qué valores son válidos, en vez de tener
- * los mismos 4 strings repetidos sueltos en cada lugar que arma el dropdown.
+ * price_unit en `services` es `text` con un CHECK de lista cerrada
+ * (services_price_unit_valid, sql_docker/fix-search-path-y-limites.sql). Esta lista es la única
+ * fuente de verdad del lado del frontend; si se agrega una unidad aquí hay que agregarla también
+ * al CHECK, o la base rechazará ese servicio.
  */
 export const PRICE_UNITS = [
   { value: 'servicio', label: 'Por servicio' },
